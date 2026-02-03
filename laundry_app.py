@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS bookings (
 """)
 conn.commit()
 
-# كلمة سر المسؤول
-ADMIN_PASSWORD = "المتحده@1996"
+# كلمة سر المسؤول ثابتة بدون اقتراح
+ADMIN_PASSWORD = "المتحده"
 show_admin = False
 tab = st.sidebar.selectbox("اختر الصفحة", ["الحجز", "المسؤول"])
 message = ""
