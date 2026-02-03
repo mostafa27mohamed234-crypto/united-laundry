@@ -73,16 +73,20 @@ if tab == "الحجز":
         submit = st.form_submit_button("احجز")
 
         if submit:
-            cutoff_date = dt_date(datetime.now().year, 3, 20)
-            if booking_date > cutoff_date:
-                message = "❌ لا يمكن الحجز بعد يوم 20/3"
+            # التحقق من أن جميع الحقول تم إدخالها
+            if not name or not address or not phone or not booking_date:
+                message = "❌ يجب ملء جميع الحقول قبل الحجز"
             else:
-                c.execute(
-                    "INSERT INTO bookings (name, address, phone, date) VALUES (?, ?, ?, ?)",
-                    (name, address, phone, booking_date.strftime("%Y-%m-%d"))
-                )
-                conn.commit()
-                message = f"✅ تم الحجز بنجاح! الاسم: {name}, التاريخ: {booking_date.strftime('%Y-%m-%d')}"
+                cutoff_date = dt_date(datetime.now().year, 3, 20)
+                if booking_date > cutoff_date:
+                    message = "❌ لا يمكن الحجز بعد يوم 20/3"
+                else:
+                    c.execute(
+                        "INSERT INTO bookings (name, address, phone, date) VALUES (?, ?, ?, ?)",
+                        (name, address, phone, booking_date.strftime("%Y-%m-%d"))
+                    )
+                    conn.commit()
+                    message = f"✅ تم الحجز بنجاح! الاسم: {name}, التاريخ: {booking_date.strftime('%Y-%m-%d')}"
 
 # ---------------- صفحة المسؤول ----------------
 elif tab == "المسؤول":
