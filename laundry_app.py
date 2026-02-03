@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime, date as dt_date, timedelta
 import sqlite3
+import pandas as pd
 
 st.set_page_config(page_title="مغسلة المتحدة للسجاد", layout="wide")
 
@@ -22,7 +23,7 @@ CREATE TABLE IF NOT EXISTS bookings (
 )
 """)
 
-# جدول حضور الموظفين
+# جدول الموظفين
 c.execute("""
 CREATE TABLE IF NOT EXISTS employees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS employees (
 )
 """)
 
+# جدول حضور الموظفين
 c.execute("""
 CREATE TABLE IF NOT EXISTS attendance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,6 +74,7 @@ body { background: linear-gradient(to bottom right, #fdf6e3, #e0c3fc); font-fami
 .call-btn a { display: inline-block; background-color: #28a745; color: white; padding: 12px 25px; border-radius: 12px; font-weight: bold; text-decoration: none;}
 .card { background-color: #fff9f0; padding: 18px; margin: 12px 0; border-radius: 18px; box-shadow: 0 6px 15px rgba(0,0,0,0.12);}
 .owner { font-size: 16px; color: #ffd700; font-weight: bold;}
+.table-container { overflow-x:auto;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -85,27 +88,9 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- عد تنازلي ----------------
-cutoff_date = dt_date(2026, 3, 10)
-today = dt_date.today()
-days_left = (cutoff_date - today).days
-
-if days_left >= 0:
-    st.markdown(f"<div class='countdown'>⏳ متبقي {days_left} يوم على غلق الحجز</div>", unsafe_allow_html=True)
-else:
-    st.markdown("<div class='countdown'>❌ تم غلق باب الحجز</div>", unsafe_allow_html=True)
-
-# ---------------- زر الاتصال ----------------
-st.markdown("""
-<div class="call-btn" style="text-align:center; margin-bottom:20px;">
-    <a href="tel:01063316053">📞 اتصل بنا الآن</a>
-</div>
-""", unsafe_allow_html=True)
-
 # ---------------- صفحة الحجز ----------------
 if tab == "الحجز":
     st.markdown("### 📝 احجز خدمتك الآن")
-
     with st.form("booking_form"):
         name = st.text_input("👤 الاسم")
         address = st.text_input("📍 العنوان")
@@ -118,8 +103,6 @@ if tab == "الحجز":
         if submit:
             if not name or not address or not phone:
                 message = "❌ برجاء استكمال البيانات الأساسية"
-            elif booking_date > cutoff_date:
-                message = "❌ الحجز متاح حتى 10 / 3 / 2026 فقط"
             else:
                 c.execute("INSERT INTO bookings (name, address, phone, date, feedback, time_slot) VALUES (?, ?, ?, ?, ?, ?)",
                           (name, address, phone, booking_date.strftime("%Y-%m-%d"), feedback, time_slot))
@@ -140,22 +123,18 @@ elif tab == "المسؤول":
     if st.session_state.get('show_admin', False):
         c.execute("SELECT name, address, phone, date, time_slot, feedback FROM bookings")
         rows = c.fetchall()
-
-        if rows:
-            for r in rows:
-                name, address, phone, date, time_slot, feedback = r
-                st.markdown(f"""
-                <div class='card'>
-                <b>👤 الاسم:</b> {name}<br>
-                <b>📍 العنوان:</b> {address}<br>
-                <b>📞 الهاتف:</b> {phone}<br>
-                <b>📅 التاريخ:</b> {date}<br>
-                <b>⏰ الوقت:</b> {time_slot}<br>
-                <b>💬 الرأي:</b> {feedback if feedback else "—"}
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.info("لا توجد حجوزات حالياً.")
+        for r in rows:
+            name, address, phone, date, time_slot, feedback = r
+            st.markdown(f"""
+            <div class='card'>
+            <b>👤 الاسم:</b> {name}<br>
+            <b>📍 العنوان:</b> {address}<br>
+            <b>📞 الهاتف:</b> {phone}<br>
+            <b>📅 التاريخ:</b> {date}<br>
+            <b>⏰ الوقت:</b> {time_slot}<br>
+            <b>💬 الرأي:</b> {feedback if feedback else "—"}
+            </div>
+            """, unsafe_allow_html=True)
 
 # ---------------- صفحة الموظفين ----------------
 elif tab == "الموظفين":
@@ -173,16 +152,15 @@ elif tab == "الموظفين":
 
     if st.session_state.show_emp:
         st.markdown("### تسجيل الحضور")
-        c.execute("SELECT id, name FROM employees")
+        c.execute("SELECT id, name, daily_rate FROM employees")
         emps = c.fetchall()
 
-        # إنشاء قائمة بجميع أيام الشهر الحالي حتى اليوم الحالي
         first_day = dt_date(today.year, today.month, 1)
         days_list = [first_day + timedelta(days=i) for i in range((today - first_day).days + 1)]
         att_date = st.selectbox("اختر تاريخ الحضور", days_list, format_func=lambda x: x.strftime('%Y-%m-%d'))
 
         attendance_data = {}
-        for emp_id, emp_name in emps:
+        for emp_id, emp_name, _ in emps:
             col1, col2 = st.columns([2,3])
             with col1:
                 present = st.checkbox(f"{emp_name}", key=f"att_{emp_id}_{att_date}")
@@ -197,17 +175,27 @@ elif tab == "الموظفين":
             conn.commit()
             st.success(f"تم حفظ الحضور لجميع الموظفين بتاريخ {att_date}")
 
-        if st.button("عرض التقرير الشهري"):
-            c.execute("SELECT id, name, daily_rate FROM employees")
-            emp_list = c.fetchall()
-            report = []
-            for emp_id, emp_name, rate in emp_list:
-                c.execute("SELECT COUNT(*) FROM attendance WHERE employee_id=? AND strftime('%m', date)=?", (emp_id, today.strftime('%m')))
-                days = c.fetchone()[0]
-                total = days * rate
-                report.append((emp_name, days, total))
-            for emp_name, days, total in report:
-                st.markdown(f"**{emp_name}** — أيام الحضور: {days} يوم — الراتب: {total} جنيه")
+        st.markdown("### جدول الحضور الشهري")
+        # إنشاء جدول حضور
+        col_names = ['الموظف'] + [d.strftime('%d') for d in days_list] + ['أيام الحضور', 'الراتب']
+        data = []
+        for emp_id, emp_name, rate in emps:
+            row = [emp_name]
+            count = 0
+            for d in days_list:
+                c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (emp_id, d.strftime('%Y-%m-%d')))
+                present = c.fetchone()
+                if present:
+                    row.append('✓')
+                    count += 1
+                else:
+                    row.append('')
+            row.append(count)
+            row.append(count * rate)
+            data.append(row)
+
+        df = pd.DataFrame(data, columns=col_names)
+        st.dataframe(df.style.set_properties(**{'text-align': 'center'}))
 
 # ---------------- رسالة ----------------
 if message:
