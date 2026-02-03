@@ -1,5 +1,6 @@
 import streamlit as st
-from datetime import date
+from datetime import datetime, date as dt_date
+
 from datetime import datetime
 
 st.set_page_config(page_title="مغسلة المتحدة للسجاد")
@@ -37,7 +38,8 @@ if tab == "الحجز":
         submit = st.form_submit_button("احجز")
 
         if submit:
-         cutoff_date = date(datetime.now().year, 3, 20)
+    cutoff_date = dt_date(datetime.now().year, 3, 20)
+
 
             if date > cutoff_date:
                 message = "❌ لا يمكن الحجز بعد يوم 20/3"
