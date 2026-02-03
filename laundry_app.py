@@ -36,7 +36,8 @@ if tab == "الحجز":
         submit = st.form_submit_button("احجز")
 
         if submit:
-            cutoff_date = datetime(datetime.now().year, 3, 20)
+            cutoff_date = datetime.now().date().replace(month=3, day=20)
+
             if date > cutoff_date:
                 message = "❌ لا يمكن الحجز بعد يوم 20/3"
             else:
