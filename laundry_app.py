@@ -68,14 +68,13 @@ conn.commit()
 ADMIN_PASSWORD = "المتحده@1996"
 EMP_PASSWORD = "mostafa23"
 ORDERS_PASSWORD = "اكرم1996"
-ATTENDANCE_REPORT_PASSWORD = "1996"  # باسورد تقرير الحضور
 OWNER_NAME = "الأستاذ أكرم حموده"
 message = ""
 
 # ---------------- Sidebar ----------------
 tab = st.sidebar.selectbox(
     "اختر الصفحة",
-    ["الحجز", "المسؤول", "الموظفين", "أوردارات اليوم", "تقرير الحضور"]
+    ["الحجز", "المسؤول", "الموظفين", "أوردارات اليوم"]
 )
 
 # ---------------- Header ----------------
@@ -172,30 +171,6 @@ elif tab == "الموظفين":
             st.warning("🗑 تم مسح حضور هذا اليوم")
             st.experimental_rerun()
 
-        # ---------------- جدول الحضور ----------------
-        st.markdown("### 📊 جدول الحضور الشهري")
-        col_names = ['الموظف'] + [d.strftime('%d') for d in days_list] + ['أيام الحضور', 'الراتب']
-        data = []
-
-        for emp_id, emp_name, rate in emps:
-            row = [emp_name]
-            count = 0
-            for d in days_list:
-                d_str = d.strftime('%Y-%m-%d')
-                c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (emp_id, d_str))
-                present = c.fetchone()
-                if present:
-                    row.append('✓')
-                    count += 1
-                else:
-                    row.append('')
-            row.append(count)
-            row.append(count*rate)
-            data.append(row)
-
-        df = pd.DataFrame(data, columns=col_names)
-        st.dataframe(df.style.set_properties(**{'text-align': 'center'}))
-
 # ================= أوردرات اليوم =================
 elif tab == "أوردارات اليوم":
     st.subheader("🔐 أوردرات اليوم")
@@ -232,46 +207,6 @@ elif tab == "أوردارات اليوم":
                 conn.commit()
                 st.experimental_rerun()
         st.markdown(f"## 💰 إجمالي اليوم: **{total} جنيه**")
-
-# ================= تقرير الحضور =================
-elif tab == "تقرير الحضور":
-    st.subheader("🔐 تقرير الحضور الشهري")
-    if "attendance_report" not in st.session_state:
-        st.session_state.attendance_report = False
-
-    report_pass = st.text_input("كلمة السر لتقرير الحضور", type="password")
-    if st.button("دخول التقرير"):
-        if report_pass == ATTENDANCE_REPORT_PASSWORD:
-            st.session_state.attendance_report = True
-        else:
-            st.error("❌ كلمة السر غير صحيحة")
-
-    if st.session_state.attendance_report:
-        month = st.selectbox("اختر الشهر", range(1,13), index=today.month-1)
-        year = st.selectbox("اختر السنة", range(2024, today.year+1), index=today.year-2024)
-
-        start_date = dt_date(year, month, 1)
-        end_date = dt_date(year if month<12 else year+1, month+1 if month<12 else 1, 1)
-
-        query = """
-        SELECT e.name, e.daily_rate, COUNT(a.id) as days
-        FROM employees e
-        LEFT JOIN attendance a
-        ON e.id = a.employee_id
-        AND a.date >= ? AND a.date < ?
-        GROUP BY e.id
-        """
-        df = pd.read_sql_query(query, conn, params=(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
-        df["المستحق"] = df["daily_rate"]*df["days"]
-        df.columns = ["الموظف", "اليومية", "عدد أيام الحضور", "المستحق"]
-        st.dataframe(df, use_container_width=True)
-
-        if st.button("🗑 مسح حضور الشهر بالكامل"):
-            c.execute("DELETE FROM attendance WHERE date >= ? AND date < ?",
-                      (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
-            conn.commit()
-            st.warning("❌ تم مسح حضور الشهر بالكامل")
-            st.experimental_rerun()
 
 # ---------------- رسالة ----------------
 if message:
