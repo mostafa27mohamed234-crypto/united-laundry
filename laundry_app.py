@@ -1,5 +1,7 @@
 import streamlit as st
 from datetime import datetime, date as dt_date
+import csv
+import os
 
 st.set_page_config(page_title="مغسلة المتحدة للسجاد")
 
@@ -9,6 +11,12 @@ ADMIN_PASSWORD = "المتحده@1996"
 show_admin = False
 tab = st.sidebar.selectbox("اختر الصفحة", ["الحجز", "المسؤول"])
 message = ""
+
+# تحميل الحجوزات من ملف CSV لو موجود
+if os.path.exists("bookings.csv"):
+    with open("bookings.csv", newline='', encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        bookings = list(reader)
 
 # HTML ثابت
 header_html = """
@@ -50,6 +58,12 @@ if tab == "الحجز":
                 bookings.append(booking)
                 message = f"✅ تم الحجز بنجاح! الاسم: {booking['name']}, التاريخ: {booking['date']}"
 
+                # حفظ كل الحجوزات في CSV
+                with open("bookings.csv", "w", newline='', encoding="utf-8") as f:
+                    writer = csv.DictWriter(f, fieldnames=["name", "address", "phone", "date"])
+                    writer.writeheader()
+                    writer.writerows(bookings)
+
 # صفحة المسؤول
 elif tab == "المسؤول":
     st.markdown("### صفحة المسؤول")
@@ -82,3 +96,4 @@ st.markdown(
     "تحت إشراف البشمهندس مصطفى الفيشاوي</div>",
     unsafe_allow_html=True
 )
+
