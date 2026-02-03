@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS bookings (
 """)
 conn.commit()
 
-ADMIN_PASSWORD = "المتحده"
+ADMIN_PASSWORD = "المتحده@1996"  # كلمة السر الجديدة
 show_admin = False
 tab = st.sidebar.selectbox("اختر الصفحة", ["الحجز", "المسؤول"])
 message = ""
@@ -139,10 +139,3 @@ if message:
         f"<div style='text-align:center; color:#b85c38; font-weight:bold; margin-bottom:15px;'>{message}</div>",
         unsafe_allow_html=True
     )
-
-# ---------------- Footer ----------------
-st.markdown(
-    "<div style='text-align:center; margin-top:30px; padding:15px; font-size:14px; color:#4b2e83; font-weight:bold;'>"
-    "تحت إشراف البشمهندس مصطفى الفيشاوي</div>",
-    unsafe_allow_html=True
-)
