@@ -5,9 +5,6 @@ import pandas as pd
 
 st.set_page_config(page_title="مغسلة المتحدة للسجاد", layout="wide")
 
-# ---------------- اليوم الحالي ----------------
-today = dt_date.today()
-
 # ---------------- قاعدة البيانات ----------------
 conn = sqlite3.connect("bookings.db", check_same_thread=False)
 c = conn.cursor()
@@ -179,6 +176,7 @@ elif tab == "الموظفين":
             st.success(f"تم حفظ الحضور لجميع الموظفين بتاريخ {att_date}")
 
         st.markdown("### جدول الحضور الشهري")
+        # إنشاء جدول حضور
         col_names = ['الموظف'] + [d.strftime('%d') for d in days_list] + ['أيام الحضور', 'الراتب']
         data = []
         for emp_id, emp_name, rate in emps:
