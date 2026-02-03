@@ -5,6 +5,9 @@ import pandas as pd
 
 st.set_page_config(page_title="مغسلة المتحدة للسجاد", layout="wide")
 
+# ---------------- اليوم الحالي ----------------
+today = dt_date.today()
+
 # ---------------- قاعدة البيانات ----------------
 conn = sqlite3.connect("bookings.db", check_same_thread=False)
 c = conn.cursor()
@@ -157,33 +160,40 @@ elif tab == "الموظفين":
 
         first_day = dt_date(today.year, today.month, 1)
         days_list = [first_day + timedelta(days=i) for i in range((today - first_day).days + 1)]
-        att_date = st.selectbox("اختر تاريخ الحضور", days_list, format_func=lambda x: x.strftime('%Y-%m-%d'))
+        att_date_strs = [d.strftime('%Y-%m-%d') for d in days_list]
+        att_date = st.selectbox("اختر تاريخ الحضور", att_date_strs)
 
         attendance_data = {}
         for emp_id, emp_name, _ in emps:
             col1, col2 = st.columns([2,3])
             with col1:
-                present = st.checkbox(f"{emp_name}", key=f"att_{emp_id}_{att_date}")
+                # تحقق إذا الحضور مسجل مسبقاً
+                c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (emp_id, att_date))
+                present = bool(c.fetchone())
+                checked = st.checkbox(f"{emp_name}", value=present, key=f"att_{emp_id}_{att_date}")
             with col2:
                 note = st.text_input(f"ملاحظات {emp_name}", key=f"note_{emp_id}_{att_date}")
-            attendance_data[emp_id] = (present, note)
+            attendance_data[emp_id] = (checked, note)
 
         if st.button("حفظ جميع الحضور"):
             for emp_id, (present, note) in attendance_data.items():
                 if present:
-                    c.execute("INSERT INTO attendance (employee_id, date, note) VALUES (?,?,?)", (emp_id, att_date.strftime("%Y-%m-%d"), note))
+                    # تجنب التكرار
+                    c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (emp_id, att_date))
+                    if not c.fetchone():
+                        c.execute("INSERT INTO attendance (employee_id, date, note) VALUES (?,?,?)", (emp_id, att_date, note))
             conn.commit()
             st.success(f"تم حفظ الحضور لجميع الموظفين بتاريخ {att_date}")
 
         st.markdown("### جدول الحضور الشهري")
-        # إنشاء جدول حضور
         col_names = ['الموظف'] + [d.strftime('%d') for d in days_list] + ['أيام الحضور', 'الراتب']
         data = []
         for emp_id, emp_name, rate in emps:
             row = [emp_name]
             count = 0
             for d in days_list:
-                c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (emp_id, d.strftime('%Y-%m-%d')))
+                d_str = d.strftime('%Y-%m-%d')
+                c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (emp_id, d_str))
                 present = c.fetchone()
                 if present:
                     row.append('✓')
