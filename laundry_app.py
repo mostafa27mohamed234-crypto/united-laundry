@@ -110,14 +110,14 @@ if tab == "الحجز":
             f"⏳ الوقت المتبقي للحجز: {days} يوم {hours} ساعة {minutes} دقيقة {seconds} ثانية"
         )
 
-        # --------- نموذج الحجز ---------
+        # --------- نموذج الحجز بدون اقتراحات ---------
         with st.form("booking_form"):
-            name = st.text_input("الاسم")
-            address = st.text_input("العنوان")
-            phone = st.text_input("رقم الهاتف")
+            name = st.text_input("الاسم", key="name", placeholder="", max_chars=50)
+            address = st.text_input("العنوان", key="address", placeholder="", max_chars=100)
+            phone = st.text_input("رقم الهاتف", key="phone", placeholder="", max_chars=15)
             booking_date = st.date_input("التاريخ", min_value=dt_date.today(), max_value=last_booking_date)
             time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
-            feedback = st.text_area("ملاحظات")
+            feedback = st.text_area("ملاحظات", key="feedback", placeholder="", height=80)
             submit = st.form_submit_button("تأكيد الحجز", use_container_width=True)
 
             if submit:
@@ -247,7 +247,7 @@ elif tab == "أوردارات اليوم":
 
     if st.session_state.orders:
         with st.form("order_form"):
-            name = st.text_input("اسم الأوردر")
+            name = st.text_input("اسم الأوردر", key="order_name", placeholder="")
             price = st.number_input("السعر", min_value=0)
             add = st.form_submit_button("إضافة")
             if add and name and price > 0:
