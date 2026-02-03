@@ -54,10 +54,6 @@ CREATE TABLE IF NOT EXISTS daily_orders (
 """)
 conn.commit()
 
-# ---------------- مسح الحجوزات القديمة الموجودة عند تشغيل البرنامج ----------------
-c.execute("DELETE FROM bookings")
-conn.commit()
-
 # ---------------- الموظفين ----------------
 employees = [
     ("مصطفى الفيشاوى", 100),
