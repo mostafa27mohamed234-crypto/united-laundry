@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import date as dt_date, timedelta
 import sqlite3
+import pandas as pd
 
 st.set_page_config(page_title="مغسلة المتحدة للسجاد", layout="wide")
 
@@ -60,7 +61,10 @@ employees = [
 for name, rate in employees:
     c.execute("SELECT id FROM employees WHERE name=?", (name,))
     if not c.fetchone():
-        c.execute("INSERT INTO employees (name,daily_rate) VALUES (?,?)", (name, rate))
+        c.execute(
+            "INSERT INTO employees (name,daily_rate) VALUES (?,?)",
+            (name, rate)
+        )
 conn.commit()
 
 # ---------------- متغيرات ----------------
@@ -68,12 +72,11 @@ ADMIN_PASSWORD = "المتحده@1996"
 EMP_PASSWORD = "mostafa23"
 ORDERS_PASSWORD = "اكرم1996"
 OWNER_NAME = "الأستاذ أكرم حموده"
-message = ""
 
 # ---------------- Sidebar ----------------
 tab = st.sidebar.selectbox(
     "اختر الصفحة",
-    ["الحجز", "المسؤول", "الموظفين", "أوردارات اليوم"]
+    ["الحجز", "الموظفين", "أوردارات اليوم", "تقرير الحضور"]
 )
 
 # ---------------- Header ----------------
@@ -103,7 +106,11 @@ if tab == "الموظفين":
         emps = c.fetchall()
 
         first_day = dt_date(today.year, today.month, 1)
-        days = [first_day + timedelta(days=i) for i in range((today - first_day).days + 1)]
+        days = [
+            first_day + timedelta(days=i)
+            for i in range((today - first_day).days + 1)
+        ]
+
         selected_day = st.selectbox(
             "اختر اليوم",
             [d.strftime("%Y-%m-%d") for d in days]
@@ -124,7 +131,9 @@ if tab == "الموظفين":
                 key=f"{emp_id}_{selected_day}"
             )
 
-        if st.button("💾 حفظ الحضور"):
+        col1, col2 = st.columns(2)
+
+        if col1.button("💾 حفظ الحضور"):
             for emp_id, present in attendance_state.items():
                 if present:
                     c.execute(
@@ -137,7 +146,71 @@ if tab == "الموظفين":
                             (emp_id, selected_day)
                         )
             conn.commit()
-            st.success("✅ تم حفظ الحضور بنجاح")
+            st.success("✅ تم حفظ الحضور")
+
+        if col2.button("🗑 مسح حضور اليوم"):
+            c.execute("DELETE FROM attendance WHERE date=?", (selected_day,))
+            conn.commit()
+            st.warning("🗑 تم مسح حضور هذا اليوم")
+            st.experimental_rerun()
+
+# ================= تقرير الحضور =================
+elif tab == "تقرير الحضور":
+    st.subheader("📊 تقرير الحضور الشهري")
+
+    month = st.selectbox(
+        "اختر الشهر",
+        range(1, 13),
+        index=today.month - 1
+    )
+
+    year = st.selectbox(
+        "اختر السنة",
+        range(2024, today.year + 1),
+        index=(today.year - 2024)
+    )
+
+    start_date = dt_date(year, month, 1)
+    end_date = (
+        dt_date(year + 1, 1, 1)
+        if month == 12
+        else dt_date(year, month + 1, 1)
+    )
+
+    query = """
+    SELECT e.name, e.daily_rate, COUNT(a.id) as days
+    FROM employees e
+    LEFT JOIN attendance a
+    ON e.id = a.employee_id
+    AND a.date >= ? AND a.date < ?
+    GROUP BY e.id
+    """
+
+    df = pd.read_sql_query(
+        query,
+        conn,
+        params=(
+            start_date.strftime("%Y-%m-%d"),
+            end_date.strftime("%Y-%m-%d")
+        )
+    )
+
+    df["المستحق"] = df["daily_rate"] * df["days"]
+    df.columns = ["الموظف", "اليومية", "عدد أيام الحضور", "المستحق"]
+
+    st.dataframe(df, use_container_width=True)
+
+    if st.button("🗑 مسح حضور الشهر بالكامل"):
+        c.execute(
+            "DELETE FROM attendance WHERE date >= ? AND date < ?",
+            (
+                start_date.strftime("%Y-%m-%d"),
+                end_date.strftime("%Y-%m-%d")
+            )
+        )
+        conn.commit()
+        st.error("❌ تم مسح حضور الشهر بالكامل")
+        st.experimental_rerun()
 
 # ================= أوردرات اليوم =================
 elif tab == "أوردارات اليوم":
@@ -172,10 +245,11 @@ elif tab == "أوردارات اليوم":
             "SELECT id,order_name,price FROM daily_orders WHERE date=?",
             (today.strftime("%Y-%m-%d"),)
         )
+
         total = 0
         for oid, n, p in c.fetchall():
             total += p
-            col1, col2, col3 = st.columns([4,2,1])
+            col1, col2, col3 = st.columns([4, 2, 1])
             col1.write(n)
             col2.write(f"{p} جنيه")
             if col3.button("❌", key=oid):
