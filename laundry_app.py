@@ -25,16 +25,14 @@ columns = [col[1] for col in c.fetchall()]
 
 if "feedback" not in columns:
     c.execute("ALTER TABLE bookings ADD COLUMN feedback TEXT")
-
 if "rating" not in columns:
     c.execute("ALTER TABLE bookings ADD COLUMN rating INTEGER")
-
 if "time_slot" not in columns:
     c.execute("ALTER TABLE bookings ADD COLUMN time_slot TEXT")
-
 conn.commit()
 
 ADMIN_PASSWORD = "المتحده@1996"
+OWNER_NAME = "الأستاذ أكرم حموده"
 show_admin = False
 tab = st.sidebar.selectbox("اختر الصفحة", ["الحجز", "المسؤول"])
 message = ""
@@ -79,14 +77,20 @@ body {
     border-radius: 18px;
     box-shadow: 0 6px 15px rgba(0,0,0,0.12);
 }
+.owner {
+    font-size: 16px;
+    color: #ffd700;
+    font-weight: bold;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- Header ----------------
-st.markdown("""
+st.markdown(f"""
 <div class="hero">
     <h1>🧼 مغسلة المتحدة للسجاد</h1>
     <p>نظافة • أمان • التزام في الميعاد</p>
+    <p class="owner">👤 المسؤول: {OWNER_NAME}</p>
     <p>📞 01063316053</p>
 </div>
 """, unsafe_allow_html=True)
@@ -142,7 +146,7 @@ if tab == "الحجز":
 
 # ---------------- صفحة المسؤول ----------------
 elif tab == "المسؤول":
-    st.markdown("### 🔐 لوحة التحكم")
+    st.markdown(f"### 🔐 لوحة التحكم — المسؤول: {OWNER_NAME}")
     password = st.text_input("كلمة السر", type="password")
 
     if st.button("دخول"):
