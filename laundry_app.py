@@ -13,17 +13,22 @@ CREATE TABLE IF NOT EXISTS bookings (
     name TEXT,
     address TEXT,
     phone TEXT,
-    date TEXT
+    date TEXT,
+    feedback TEXT
 )
 """)
 conn.commit()
 
-ADMIN_PASSWORD = "المتحده@1996"  # كلمة السر الجديدة
+# 🔴 مسح كل الحجوزات القديمة (بداية جديدة)
+c.execute("DELETE FROM bookings")
+conn.commit()
+
+ADMIN_PASSWORD = "المتحده@1996"
 show_admin = False
 tab = st.sidebar.selectbox("اختر الصفحة", ["الحجز", "المسؤول"])
 message = ""
 
-# ---------------- CSS للتجميل ----------------
+# ---------------- CSS ----------------
 st.markdown("""
 <style>
 body {
@@ -49,7 +54,7 @@ button {
 """, unsafe_allow_html=True)
 
 # ---------------- Header ----------------
-header_html = """
+st.markdown("""
 <div style="text-align:center; padding:20px; background-color:#4b2e83; color:white; border-radius:15px;">
     <h1>مغسلة المتحدة للسجاد</h1>
 </div>
@@ -59,87 +64,67 @@ header_html = """
 <div style="text-align:center; font-size:16px; color:#333; margin-top:5px;">
 إدارة الأستاذ أكرم حموده - 📞 01063316053
 </div>
-"""
-st.markdown(header_html, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # ---------------- صفحة الحجز ----------------
 if tab == "الحجز":
     st.markdown("### صفحة الحجز")
-    with st.form(key="booking_form"):
+
+    with st.form("booking_form"):
         name = st.text_input("الاسم", autocomplete="off")
         address = st.text_input("العنوان", autocomplete="off")
         phone = st.text_input("رقم الهاتف", autocomplete="off")
         booking_date = st.date_input("تاريخ الحجز")
+        feedback = st.text_area("رأيك يهمنا (اختياري)")
         submit = st.form_submit_button("احجز")
 
         if submit:
-            # التحقق من أن جميع الحقول تم إدخالها
-            if not name or not address or not phone or not booking_date:
-                message = "❌ يجب ملء جميع الحقول قبل الحجز"
+            if not name or not address or not phone:
+                message = "❌ يجب ملء البيانات الأساسية"
             else:
-                cutoff_date = dt_date(datetime.now().year, 3, 20)
+                cutoff_date = dt_date(2026, 3, 10)
                 if booking_date > cutoff_date:
-                    message = "❌ لا يمكن الحجز بعد يوم 20/3"
+                    message = "❌ الحجز متاح حتى يوم 10 / 3 / 2026 فقط"
                 else:
                     c.execute(
-                        "INSERT INTO bookings (name, address, phone, date) VALUES (?, ?, ?, ?)",
-                        (name, address, phone, booking_date.strftime("%Y-%m-%d"))
+                        "INSERT INTO bookings (name, address, phone, date, feedback) VALUES (?, ?, ?, ?, ?)",
+                        (name, address, phone, booking_date.strftime("%Y-%m-%d"), feedback)
                     )
                     conn.commit()
-                    message = f"✅ تم الحجز بنجاح! الاسم: {name}, التاريخ: {booking_date.strftime('%Y-%m-%d')}"
+                    message = "✅ تم الحجز بنجاح"
 
 # ---------------- صفحة المسؤول ----------------
 elif tab == "المسؤول":
     st.markdown("### صفحة المسؤول")
     password = st.text_input("كلمة السر", type="password")
-    check = st.button("دخول")
-
-    if check:
+    if st.button("دخول"):
         if password == ADMIN_PASSWORD:
             show_admin = True
         else:
-            message = "❌ كلمة السر خاطئة"
+            message = "❌ كلمة السر غير صحيحة"
 
     if show_admin:
-        st.markdown("### الحجوزات")
-        c.execute("SELECT id, name, address, phone, date FROM bookings")
+        c.execute("SELECT * FROM bookings")
         rows = c.fetchall()
 
         if rows:
             for r in rows:
-                booking_id, name, address, phone, date = r
-                st.markdown(f"<div class='card'>"
-                            f"<b>الاسم:</b> {name} <br>"
-                            f"<b>العنوان:</b> {address} <br>"
-                            f"<b>الهاتف:</b> {phone} <br>"
-                            f"<b>التاريخ:</b> {date} <br>", unsafe_allow_html=True)
-                
-                col1, col2 = st.columns([1,1])
-                with col1:
-                    if st.button(f"حذف {booking_id}", key=f"del{booking_id}"):
-                        c.execute("DELETE FROM bookings WHERE id = ?", (booking_id,))
-                        conn.commit()
-                        st.experimental_rerun()
-                with col2:
-                    with st.expander("تعديل"):
-                        new_name = st.text_input("الاسم الجديد", value=name, key=f"name{booking_id}")
-                        new_address = st.text_input("العنوان الجديد", value=address, key=f"address{booking_id}")
-                        new_phone = st.text_input("الهاتف الجديد", value=phone, key=f"phone{booking_id}")
-                        new_date = st.date_input("التاريخ الجديد", value=datetime.strptime(date, "%Y-%m-%d"), key=f"date{booking_id}")
-                        if st.button(f"تحديث {booking_id}", key=f"update{booking_id}"):
-                            c.execute(
-                                "UPDATE bookings SET name=?, address=?, phone=?, date=? WHERE id=?",
-                                (new_name, new_address, new_phone, new_date.strftime("%Y-%m-%d"), booking_id)
-                            )
-                            conn.commit()
-                            st.experimental_rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
+                id, name, address, phone, date, feedback = r
+                st.markdown(f"""
+                <div class='card'>
+                <b>الاسم:</b> {name}<br>
+                <b>العنوان:</b> {address}<br>
+                <b>الهاتف:</b> {phone}<br>
+                <b>التاريخ:</b> {date}<br>
+                <b>رأي العميل:</b> {feedback if feedback else "—"}
+                </div>
+                """, unsafe_allow_html=True)
         else:
-            st.info("لا توجد حجوزات حتى الآن.")
+            st.info("لا توجد حجوزات حالياً.")
 
 # ---------------- رسالة ----------------
 if message:
     st.markdown(
-        f"<div style='text-align:center; color:#b85c38; font-weight:bold; margin-bottom:15px;'>{message}</div>",
+        f"<div style='text-align:center; color:#b85c38; font-weight:bold;'>{message}</div>",
         unsafe_allow_html=True
     )
