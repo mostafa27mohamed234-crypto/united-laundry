@@ -175,9 +175,10 @@ elif tab == "الموظفين":
         c.execute("SELECT id, name FROM employees")
         emps = c.fetchall()
 
-        # اختر تاريخ الحضور من أول الشهر حتى اليوم
+        # إنشاء قائمة بجميع أيام الشهر الحالي حتى اليوم الحالي
         first_day = dt_date(today.year, today.month, 1)
-        att_date = st.date_input("اختر تاريخ الحضور", min_value=first_day, max_value=today, value=today)
+        days_list = [first_day + timedelta(days=i) for i in range((today - first_day).days + 1)]
+        att_date = st.selectbox("اختر تاريخ الحضور", days_list, format_func=lambda x: x.strftime('%Y-%m-%d'))
 
         for emp_id, emp_name in emps:
             col1, col2 = st.columns([2,3])
