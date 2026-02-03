@@ -68,6 +68,7 @@ conn.commit()
 ADMIN_PASSWORD = "المتحده@1996"
 EMP_PASSWORD = "mostafa23"
 ORDERS_PASSWORD = "اكرم1996"
+ATTENDANCE_REPORT_PASSWORD = "1996"  # باسورد تقرير الحضور
 OWNER_NAME = "الأستاذ أكرم حموده"
 message = ""
 
@@ -234,32 +235,43 @@ elif tab == "أوردارات اليوم":
 
 # ================= تقرير الحضور =================
 elif tab == "تقرير الحضور":
-    st.subheader("📊 تقرير الحضور الشهري")
-    month = st.selectbox("اختر الشهر", range(1,13), index=today.month-1)
-    year = st.selectbox("اختر السنة", range(2024, today.year+1), index=today.year-2024)
+    st.subheader("🔐 تقرير الحضور الشهري")
+    if "attendance_report" not in st.session_state:
+        st.session_state.attendance_report = False
 
-    start_date = dt_date(year, month, 1)
-    end_date = dt_date(year if month<12 else year+1, month+1 if month<12 else 1, 1)
+    report_pass = st.text_input("كلمة السر لتقرير الحضور", type="password")
+    if st.button("دخول التقرير"):
+        if report_pass == ATTENDANCE_REPORT_PASSWORD:
+            st.session_state.attendance_report = True
+        else:
+            st.error("❌ كلمة السر غير صحيحة")
 
-    query = """
-    SELECT e.name, e.daily_rate, COUNT(a.id) as days
-    FROM employees e
-    LEFT JOIN attendance a
-    ON e.id = a.employee_id
-    AND a.date >= ? AND a.date < ?
-    GROUP BY e.id
-    """
-    df = pd.read_sql_query(query, conn, params=(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
-    df["المستحق"] = df["daily_rate"]*df["days"]
-    df.columns = ["الموظف", "اليومية", "عدد أيام الحضور", "المستحق"]
-    st.dataframe(df, use_container_width=True)
+    if st.session_state.attendance_report:
+        month = st.selectbox("اختر الشهر", range(1,13), index=today.month-1)
+        year = st.selectbox("اختر السنة", range(2024, today.year+1), index=today.year-2024)
 
-    if st.button("🗑 مسح حضور الشهر بالكامل"):
-        c.execute("DELETE FROM attendance WHERE date >= ? AND date < ?",
-                  (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
-        conn.commit()
-        st.warning("❌ تم مسح حضور الشهر بالكامل")
-        st.experimental_rerun()
+        start_date = dt_date(year, month, 1)
+        end_date = dt_date(year if month<12 else year+1, month+1 if month<12 else 1, 1)
+
+        query = """
+        SELECT e.name, e.daily_rate, COUNT(a.id) as days
+        FROM employees e
+        LEFT JOIN attendance a
+        ON e.id = a.employee_id
+        AND a.date >= ? AND a.date < ?
+        GROUP BY e.id
+        """
+        df = pd.read_sql_query(query, conn, params=(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
+        df["المستحق"] = df["daily_rate"]*df["days"]
+        df.columns = ["الموظف", "اليومية", "عدد أيام الحضور", "المستحق"]
+        st.dataframe(df, use_container_width=True)
+
+        if st.button("🗑 مسح حضور الشهر بالكامل"):
+            c.execute("DELETE FROM attendance WHERE date >= ? AND date < ?",
+                      (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
+            conn.commit()
+            st.warning("❌ تم مسح حضور الشهر بالكامل")
+            st.experimental_rerun()
 
 # ---------------- رسالة ----------------
 if message:
