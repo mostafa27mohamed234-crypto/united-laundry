@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import date as dt_date, datetime, timedelta
 import sqlite3
 import pandas as pd
+import time
 
 # ---------------- إعداد الصفحة ----------------
 st.set_page_config(
@@ -92,10 +93,17 @@ st.markdown(f"""
 if tab == "الحجز":
     st.markdown("## 📝 حجز خدمة", unsafe_allow_html=True)
 
-    # --------- العد التنازلي ---------
+    # --------- زر لمسح جميع الحجوزات ---------
+    if st.button("🗑 مسح جميع الحجوزات"):
+        c.execute("DELETE FROM bookings")
+        conn.commit()
+        st.success("🗑 تم مسح جميع الحجوزات")
+
+    # --------- العد التنازلي الديناميكي ---------
     countdown_placeholder = st.empty()
-    now = datetime.now()
     end_datetime = datetime.combine(last_booking_date, datetime.max.time())
+
+    now = datetime.now()
     remaining = end_datetime - now
 
     if remaining.total_seconds() > 0:
@@ -105,8 +113,11 @@ if tab == "الحجز":
         countdown_placeholder.info(
             f"⏳ الوقت المتبقي للحجز: {days} يوم {hours} ساعة {minutes} دقيقة {seconds} ثانية"
         )
+    else:
+        countdown_placeholder.warning("❌ انتهت فترة الحجز المتاحة حتى 10/03/2026")
 
-        # --------- نموذج الحجز ---------
+    # --------- نموذج الحجز ---------
+    if today <= last_booking_date:
         with st.form("booking_form"):
             name = st.text_input("الاسم")
             address = st.text_input("العنوان")
@@ -126,7 +137,6 @@ if tab == "الحجز":
                     conn.commit()
                     message = "✅ تم الحجز بنجاح"
     else:
-        countdown_placeholder.warning("❌ انتهت فترة الحجز المتاحة حتى 10/03/2026")
         st.info("الحجز مغلق الآن")
 
 # ================= صفحة المسؤول =================
