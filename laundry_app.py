@@ -7,21 +7,26 @@ st.set_page_config(page_title="مغسلة المتحدة للسجاد", layout="
 # ---------------- قاعدة البيانات ----------------
 conn = sqlite3.connect("bookings.db", check_same_thread=False)
 c = conn.cursor()
+
+# إنشاء الجدول الأساسي
 c.execute("""
 CREATE TABLE IF NOT EXISTS bookings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
     address TEXT,
     phone TEXT,
-    date TEXT,
-    feedback TEXT
+    date TEXT
 )
 """)
 conn.commit()
 
-# 🔴 مسح كل الحجوزات القديمة (بداية جديدة)
-c.execute("DELETE FROM bookings")
-conn.commit()
+# التأكد من وجود عمود feedback (حل المشكلة)
+c.execute("PRAGMA table_info(bookings)")
+columns = [col[1] for col in c.fetchall()]
+
+if "feedback" not in columns:
+    c.execute("ALTER TABLE bookings ADD COLUMN feedback TEXT")
+    conn.commit()
 
 ADMIN_PASSWORD = "المتحده@1996"
 show_admin = False
@@ -33,7 +38,7 @@ st.markdown("""
 <style>
 body {
     background: linear-gradient(to bottom right, #fdf6e3, #e0c3fc);
-    font-family: 'Arial', sans-serif;
+    font-family: Arial, sans-serif;
 }
 h1, h2, h3 {
     color: #4b2e83;
@@ -84,7 +89,7 @@ if tab == "الحجز":
             else:
                 cutoff_date = dt_date(2026, 3, 10)
                 if booking_date > cutoff_date:
-                    message = "❌ الحجز متاح حتى يوم 10 / 3 / 2026 فقط"
+                    message = "❌ الحجز متاح حتى 10 / 3 / 2026 فقط"
                 else:
                     c.execute(
                         "INSERT INTO bookings (name, address, phone, date, feedback) VALUES (?, ?, ?, ?, ?)",
@@ -97,6 +102,7 @@ if tab == "الحجز":
 elif tab == "المسؤول":
     st.markdown("### صفحة المسؤول")
     password = st.text_input("كلمة السر", type="password")
+
     if st.button("دخول"):
         if password == ADMIN_PASSWORD:
             show_admin = True
