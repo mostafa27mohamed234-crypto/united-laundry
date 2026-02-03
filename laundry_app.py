@@ -1,11 +1,10 @@
 import streamlit as st
 from datetime import date as dt_date, timedelta
 import sqlite3
-import pandas as pd
 
 st.set_page_config(page_title="مغسلة المتحدة للسجاد", layout="wide")
 
-# ---------------- اليوم الحالي ----------------
+# ---------------- اليوم ----------------
 today = dt_date.today()
 
 # ---------------- قاعدة البيانات ----------------
@@ -37,8 +36,7 @@ c.execute("""
 CREATE TABLE IF NOT EXISTS attendance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     employee_id INTEGER,
-    date TEXT,
-    note TEXT
+    date TEXT
 )
 """)
 
@@ -52,7 +50,7 @@ CREATE TABLE IF NOT EXISTS daily_orders (
 """)
 conn.commit()
 
-# ---------------- بيانات الموظفين ----------------
+# ---------------- الموظفين ----------------
 employees = [
     ("مصطفى الفيشاوى", 100),
     ("وليد المالكي", 150),
@@ -62,7 +60,7 @@ employees = [
 for name, rate in employees:
     c.execute("SELECT id FROM employees WHERE name=?", (name,))
     if not c.fetchone():
-        c.execute("INSERT INTO employees (name, daily_rate) VALUES (?,?)", (name, rate))
+        c.execute("INSERT INTO employees (name,daily_rate) VALUES (?,?)", (name, rate))
 conn.commit()
 
 # ---------------- متغيرات ----------------
@@ -81,62 +79,13 @@ tab = st.sidebar.selectbox(
 # ---------------- Header ----------------
 st.markdown(f"""
 <h1 style="text-align:center;">🧼 مغسلة المتحدة للسجاد</h1>
-<p style="text-align:center;">👤 المسؤول: {OWNER_NAME} | 📞 01063316053</p>
+<p style="text-align:center;">👤 المسؤول: {OWNER_NAME}</p>
 <hr>
 """, unsafe_allow_html=True)
 
-# ================= صفحة الحجز =================
-if tab == "الحجز":
-    st.subheader("📝 حجز خدمة")
-    with st.form("booking_form"):
-        name = st.text_input("الاسم")
-        address = st.text_input("العنوان")
-        phone = st.text_input("رقم الهاتف")
-        booking_date = st.date_input("التاريخ")
-        time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
-        feedback = st.text_area("ملاحظات")
-        submit = st.form_submit_button("تأكيد الحجز")
-
-        if submit:
-            if not name or not address or not phone:
-                message = "❌ برجاء استكمال البيانات"
-            else:
-                c.execute("""
-                    INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
-                    VALUES (?,?,?,?,?,?)
-                """, (name, address, phone, booking_date.strftime("%Y-%m-%d"), feedback, time_slot))
-                conn.commit()
-                message = "✅ تم الحجز بنجاح"
-
-# ================= صفحة المسؤول =================
-elif tab == "المسؤول":
-    st.subheader("🔐 لوحة المسؤول")
-
-    if "admin" not in st.session_state:
-        st.session_state.admin = False
-
-    password = st.text_input("كلمة السر", type="password")
-
-    if st.button("دخول"):
-        if password == ADMIN_PASSWORD:
-            st.session_state.admin = True
-        else:
-            message = "❌ كلمة السر غير صحيحة"
-
-    if st.session_state.admin:
-        c.execute("SELECT name,address,phone,date,time_slot FROM bookings")
-        for r in c.fetchall():
-            st.info(f"""
-👤 {r[0]}
-📍 {r[1]}
-📞 {r[2]}
-📅 {r[3]}
-⏰ {r[4]}
-""")
-
 # ================= صفحة الموظفين =================
-elif tab == "الموظفين":
-    st.subheader("🔐 حضور الموظفين")
+if tab == "الموظفين":
+    st.subheader("🔐 تسجيل حضور الموظفين")
 
     if "emp" not in st.session_state:
         st.session_state.emp = False
@@ -147,7 +96,7 @@ elif tab == "الموظفين":
         if emp_pass == EMP_PASSWORD:
             st.session_state.emp = True
         else:
-            message = "❌ كلمة السر غير صحيحة"
+            st.error("❌ كلمة السر غير صحيحة")
 
     if st.session_state.emp:
         c.execute("SELECT id,name FROM employees")
@@ -155,18 +104,40 @@ elif tab == "الموظفين":
 
         first_day = dt_date(today.year, today.month, 1)
         days = [first_day + timedelta(days=i) for i in range((today - first_day).days + 1)]
-        day = st.selectbox("اختر اليوم", [d.strftime("%Y-%m-%d") for d in days])
+        selected_day = st.selectbox(
+            "اختر اليوم",
+            [d.strftime("%Y-%m-%d") for d in days]
+        )
+
+        attendance_state = {}
 
         for emp_id, emp_name in emps:
-            present = st.checkbox(emp_name, key=f"{emp_id}_{day}")
-            if present:
-                c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (emp_id, day))
-                if not c.fetchone():
-                    c.execute("INSERT INTO attendance (employee_id,date) VALUES (?,?)", (emp_id, day))
+            c.execute(
+                "SELECT 1 FROM attendance WHERE employee_id=? AND date=?",
+                (emp_id, selected_day)
+            )
+            already = bool(c.fetchone())
 
-        if st.button("حفظ الحضور"):
+            attendance_state[emp_id] = st.checkbox(
+                emp_name,
+                value=already,
+                key=f"{emp_id}_{selected_day}"
+            )
+
+        if st.button("💾 حفظ الحضور"):
+            for emp_id, present in attendance_state.items():
+                if present:
+                    c.execute(
+                        "SELECT 1 FROM attendance WHERE employee_id=? AND date=?",
+                        (emp_id, selected_day)
+                    )
+                    if not c.fetchone():
+                        c.execute(
+                            "INSERT INTO attendance (employee_id,date) VALUES (?,?)",
+                            (emp_id, selected_day)
+                        )
             conn.commit()
-            st.success("✅ تم حفظ الحضور")
+            st.success("✅ تم حفظ الحضور بنجاح")
 
 # ================= أوردرات اليوم =================
 elif tab == "أوردارات اليوم":
@@ -181,47 +152,38 @@ elif tab == "أوردارات اليوم":
         if order_pass == ORDERS_PASSWORD:
             st.session_state.orders = True
         else:
-            message = "❌ كلمة السر غير صحيحة"
+            st.error("❌ كلمة السر غير صحيحة")
 
     if st.session_state.orders:
-        st.markdown("### ➕ إضافة أوردر")
         with st.form("order_form"):
-            order_name = st.text_input("اسم الأوردر")
-            price = st.number_input("السعر", min_value=0, step=10)
+            name = st.text_input("اسم الأوردر")
+            price = st.number_input("السعر", min_value=0)
             add = st.form_submit_button("إضافة")
 
-            if add:
-                if order_name and price > 0:
-                    c.execute("""
-                        INSERT INTO daily_orders (order_name,price,date)
-                        VALUES (?,?,?)
-                    """, (order_name, price, today.strftime("%Y-%m-%d")))
-                    conn.commit()
-                    st.success("✅ تم إضافة الأوردر")
-                else:
-                    st.warning("من فضلك أدخل اسم الأوردر والسعر")
+            if add and name and price > 0:
+                c.execute(
+                    "INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)",
+                    (name, price, today.strftime("%Y-%m-%d"))
+                )
+                conn.commit()
+                st.success("✅ تم إضافة الأوردر")
 
-        st.markdown("### 📋 أوردرات اليوم")
-        c.execute("SELECT id,order_name,price FROM daily_orders WHERE date=?",
-                  (today.strftime("%Y-%m-%d"),))
-        orders = c.fetchall()
-
+        c.execute(
+            "SELECT id,order_name,price FROM daily_orders WHERE date=?",
+            (today.strftime("%Y-%m-%d"),)
+        )
         total = 0
-        for oid, name, price in orders:
-            total += price
-            col1, col2, col3 = st.columns([4, 2, 1])
-            col1.write(f"🧾 {name}")
-            col2.write(f"💰 {price} جنيه")
-            if col3.button("❌ حذف", key=f"del_{oid}"):
+        for oid, n, p in c.fetchall():
+            total += p
+            col1, col2, col3 = st.columns([4,2,1])
+            col1.write(n)
+            col2.write(f"{p} جنيه")
+            if col3.button("❌", key=oid):
                 c.execute("DELETE FROM daily_orders WHERE id=?", (oid,))
                 conn.commit()
                 st.experimental_rerun()
 
-        st.markdown(f"## 💵 إجمالي اليوم: **{total} جنيه**")
-
-# ---------------- رسالة ----------------
-if message:
-    st.warning(message)
+        st.markdown(f"## 💰 إجمالي اليوم: **{total} جنيه**")
 
 # ---------------- Footer ----------------
 st.markdown("<hr><center>🤲 اللهم بارك لنا في عملنا</center>", unsafe_allow_html=True)
