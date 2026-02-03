@@ -10,29 +10,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ---------------- CSS للتنسيق والألوان ----------------
-st.markdown("""
-<style>
-body {
-    background-color: #fff8f0;
-    color: #333333;
-}
-h1 {
-    color: #e07b39;
-}
-h2, h3 {
-    color: #d65a31;
-}
-.stButton>button {
-    background-color: #e07b39;
-    color: white;
-}
-.stTextInput>div>div>input {
-    border-radius: 8px;
-}
-</style>
-""", unsafe_allow_html=True)
-
 # ---------------- اليوم ----------------
 today = dt_date.today()
 
@@ -40,7 +17,7 @@ today = dt_date.today()
 conn = sqlite3.connect("bookings.db", check_same_thread=False)
 c = conn.cursor()
 
-# ---------------- إنشاء الجداول ----------------
+# ---------------- الجداول ----------------
 c.execute("""
 CREATE TABLE IF NOT EXISTS bookings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,13 +53,12 @@ CREATE TABLE IF NOT EXISTS daily_orders (
 """)
 conn.commit()
 
-# ---------------- بيانات الموظفين ----------------
+# ---------------- الموظفين ----------------
 employees = [
     ("مصطفى الفيشاوى", 100),
     ("وليد المالكي", 150),
     ("ابراهيم بكير", 150)
 ]
-
 for name, rate in employees:
     c.execute("SELECT id FROM employees WHERE name=?", (name,))
     if not c.fetchone():
@@ -98,55 +74,44 @@ message = ""
 
 # ---------------- Sidebar ----------------
 tab = st.sidebar.selectbox(
-    "اختر الصفحة",
-    ["🏠 الرئيسية", "الحجز", "المسؤول", "الموظفين", "أوردارات اليوم"]
+    "📌 اختر الصفحة",
+    ["الحجز", "المسؤول", "الموظفين", "أوردارات اليوم"]
 )
 
 # ---------------- Header ----------------
 st.markdown(f"""
-<div style="background-color:#ffe5d4;padding:15px;border-radius:10px;">
-<h1 style="text-align:center;">🧼 مغسلة المتحدة للسجاد</h1>
-<h3 style="text-align:center;">👤 المسؤول: {OWNER_NAME} | 📞 01063316053</h3>
-<h2 style="text-align:center;color:#d65a31;">🌙 رمضان كريم وكل عام وأنتم بخير!</h2>
+<div style="text-align:center; background-color:#FFF3E0; padding:20px; border-radius:15px;">
+    <h1 style="color:#FF6F00;">🧼 مغسلة المتحدة للسجاد</h1>
+    <h3 style="color:#E65100;">👤 المسؤول: {OWNER_NAME} | 📞 01063316053</h3>
+    <h2 style="color:#D32F2F; margin-top:10px;">🌙 رمضان كريم! كل عام وأنتم بخير 🌙</h2>
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- Home Page ----------------
-if tab == "🏠 الرئيسية":
-    st.markdown("### أهلاً بك في نظام مغسلة المتحدة للسجاد")
-    st.markdown("يمكنك استخدام الشريط الجانبي للتنقل بين الصفحات: الحجز، المسؤول، الموظفين، وأوردارات اليوم.")
-    st.image("https://images.unsplash.com/photo-1581092334170-1f0e5ffce7f0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1050&q=80",
-             caption="مرحبًا بك في مغسلة المتحدة للسجاد", use_column_width=True)
-
 # ================= صفحة الحجز =================
-elif tab == "الحجز":
-    st.markdown("## 📝 حجز خدمة")
-    with st.container():
-        with st.form("booking_form"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("الاسم")
-                address = st.text_input("العنوان")
-            with col2:
-                phone = st.text_input("رقم الهاتف")
-                booking_date = st.date_input("التاريخ", value=today)
-            time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
-            feedback = st.text_area("ملاحظات")
-            submit = st.form_submit_button("تأكيد الحجز")
+if tab == "الحجز":
+    st.markdown("## 📝 حجز خدمة", unsafe_allow_html=True)
+    with st.form("booking_form"):
+        name = st.text_input("الاسم")
+        address = st.text_input("العنوان")
+        phone = st.text_input("رقم الهاتف")
+        booking_date = st.date_input("التاريخ")
+        time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
+        feedback = st.text_area("ملاحظات")
+        submit = st.form_submit_button("تأكيد الحجز", use_container_width=True)
 
-            if submit:
-                if not name or not address or not phone:
-                    message = "❌ برجاء استكمال البيانات"
-                else:
-                    c.execute("""INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
-                                 VALUES (?,?,?,?,?,?)""",
-                              (name,address,phone,booking_date.strftime("%Y-%m-%d"),feedback,time_slot))
-                    conn.commit()
-                    message = "✅ تم الحجز بنجاح"
+        if submit:
+            if not name or not address or not phone:
+                message = "❌ برجاء استكمال البيانات"
+            else:
+                c.execute("""INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
+                             VALUES (?,?,?,?,?,?)""",
+                          (name,address,phone,booking_date.strftime("%Y-%m-%d"),feedback,time_slot))
+                conn.commit()
+                message = "✅ تم الحجز بنجاح"
 
 # ================= صفحة المسؤول =================
 elif tab == "المسؤول":
-    st.markdown("## 🔐 لوحة المسؤول")
+    st.markdown("## 🔐 لوحة المسؤول", unsafe_allow_html=True)
     if "admin" not in st.session_state:
         st.session_state.admin = False
 
@@ -158,13 +123,20 @@ elif tab == "المسؤول":
             st.error("❌ كلمة السر غير صحيحة")
 
     if st.session_state.admin:
-        st.markdown("### 📋 الحجوزات الحالية")
-        df_bookings = pd.read_sql("SELECT name,address,phone,date,time_slot,feedback FROM bookings", conn)
-        st.dataframe(df_bookings, use_container_width=True)
+        st.markdown("### 📋 الحجوزات المسجلة")
+        c.execute("SELECT name,address,phone,date,time_slot,feedback FROM bookings")
+        bookings = c.fetchall()
+        if bookings:
+            df = pd.DataFrame(bookings, columns=['الاسم','العنوان','رقم الهاتف','التاريخ','الوقت','ملاحظات'])
+            st.dataframe(df.style.set_properties(**{
+                'text-align': 'center', 'background-color':'#FFFDE7', 'color':'#3E2723'
+            }))
+        else:
+            st.info("لا توجد حجوزات بعد")
 
 # ================= صفحة الموظفين =================
 elif tab == "الموظفين":
-    st.markdown("## 👥 تسجيل وحساب حضور الموظفين")
+    st.markdown("## 🔐 تسجيل وحساب حضور الموظفين")
     if "emp" not in st.session_state:
         st.session_state.emp = False
 
@@ -186,8 +158,7 @@ elif tab == "الموظفين":
 
         attendance_state = {}
         for emp_id, emp_name, _ in emps:
-            c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?",
-                      (emp_id, selected_day))
+            c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (emp_id, selected_day))
             already = bool(c.fetchone())
             attendance_state[emp_id] = st.checkbox(emp_name, value=already, key=f"{emp_id}_{selected_day}")
 
@@ -195,11 +166,9 @@ elif tab == "الموظفين":
         if col1.button("💾 حفظ الحضور"):
             for emp_id, present in attendance_state.items():
                 if present:
-                    c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?",
-                              (emp_id, selected_day))
+                    c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (emp_id, selected_day))
                     if not c.fetchone():
-                        c.execute("INSERT INTO attendance (employee_id,date) VALUES (?,?)",
-                                  (emp_id, selected_day))
+                        c.execute("INSERT INTO attendance (employee_id,date) VALUES (?,?)", (emp_id, selected_day))
             conn.commit()
             st.success("✅ تم حفظ الحضور")
 
@@ -213,7 +182,6 @@ elif tab == "الموظفين":
         st.markdown("### 📊 جدول الحضور الشهري")
         col_names = ['الموظف'] + [d.strftime('%d') for d in days_list] + ['أيام الحضور', 'الراتب']
         data = []
-
         for emp_id, emp_name, rate in emps:
             row = [emp_name]
             count = 0
@@ -229,13 +197,12 @@ elif tab == "الموظفين":
             row.append(count)
             row.append(count*rate)
             data.append(row)
-
         df = pd.DataFrame(data, columns=col_names)
-        st.dataframe(df.style.set_properties(**{'text-align': 'center'}))
+        st.dataframe(df.style.set_properties(**{'text-align': 'center', 'background-color':'#E0F7FA','color':'#006064'}))
 
 # ================= أوردرات اليوم =================
 elif tab == "أوردارات اليوم":
-    st.markdown("## 🛒 أوردرات اليوم")
+    st.markdown("## 🔐 أوردرات اليوم")
     if "orders" not in st.session_state:
         st.session_state.orders = False
 
@@ -262,8 +229,8 @@ elif tab == "أوردارات اليوم":
         for oid, n, p in c.fetchall():
             total += p
             col1, col2, col3 = st.columns([4,2,1])
-            col1.write(n)
-            col2.write(f"{p} جنيه")
+            col1.markdown(f"**{n}**")
+            col2.markdown(f"💰 {p} جنيه")
             if col3.button("❌", key=oid):
                 c.execute("DELETE FROM daily_orders WHERE id=?", (oid,))
                 conn.commit()
@@ -277,5 +244,5 @@ if message:
 # ---------------- Footer ----------------
 st.markdown("""
 <hr>
-<center>🤲 اللهم بارك لنا في عملنا</center>
+<center style="color:#4E342E;">🤲 اللهم بارك لنا في عملنا</center>
 """, unsafe_allow_html=True)
