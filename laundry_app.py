@@ -2,9 +2,9 @@ import streamlit as st
 from datetime import datetime, date as dt_date
 import sqlite3
 
-st.set_page_config(page_title="مغسلة المتحدة للسجاد")
+st.set_page_config(page_title="مغسلة المتحدة للسجاد", layout="wide")
 
-# إعداد قاعدة البيانات
+# ---------------- قاعدة البيانات ----------------
 conn = sqlite3.connect("bookings.db", check_same_thread=False)
 c = conn.cursor()
 c.execute("""
@@ -18,25 +18,48 @@ CREATE TABLE IF NOT EXISTS bookings (
 """)
 conn.commit()
 
-# كلمة سر المسؤول ثابتة بدون اقتراح
 ADMIN_PASSWORD = "المتحده"
 show_admin = False
 tab = st.sidebar.selectbox("اختر الصفحة", ["الحجز", "المسؤول"])
 message = ""
 
-# HTML ثابت
+# ---------------- CSS للتجميل ----------------
+st.markdown("""
+<style>
+body {
+    background: linear-gradient(to bottom right, #fdf6e3, #e0c3fc);
+    font-family: 'Arial', sans-serif;
+}
+h1, h2, h3 {
+    color: #4b2e83;
+}
+.card {
+    background-color: #fff9f0;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+button {
+    background-color: #d4af37 !important;
+    color: white !important;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- Header ----------------
 header_html = """
-<div style="text-align:center; padding:20px; background-color:#d4af37; color:white;">
+<div style="text-align:center; padding:20px; background-color:#4b2e83; color:white; border-radius:15px;">
     <h1>مغسلة المتحدة للسجاد</h1>
 </div>
 <div style="text-align:center; font-size:20px; font-weight:bold; color:#b85c38; margin-top:10px;">
-✨ مغسلة المتحدة تهنئكم بحلول شهر رمضان الكريم ✨
+✨ تهنئة بحلول شهر رمضان المبارك ✨
 </div>
-<div style="text-align:center; font-size:16px; color:#4b2e83; margin-top:5px;">
+<div style="text-align:center; font-size:16px; color:#333; margin-top:5px;">
 إدارة الأستاذ أكرم حموده - 📞 01063316053
 </div>
 """
-
 st.markdown(header_html, unsafe_allow_html=True)
 
 # ---------------- صفحة الحجز ----------------
@@ -54,7 +77,6 @@ if tab == "الحجز":
             if booking_date > cutoff_date:
                 message = "❌ لا يمكن الحجز بعد يوم 20/3"
             else:
-                # حفظ البيانات في قاعدة البيانات
                 c.execute(
                     "INSERT INTO bookings (name, address, phone, date) VALUES (?, ?, ?, ?)",
                     (name, address, phone, booking_date.strftime("%Y-%m-%d"))
@@ -82,8 +104,13 @@ elif tab == "المسؤول":
         if rows:
             for r in rows:
                 booking_id, name, address, phone, date = r
-                st.markdown(f"**الاسم:** {name} | **العنوان:** {address} | **الهاتف:** {phone} | **التاريخ:** {date}")
-                col1, col2 = st.columns([1, 1])
+                st.markdown(f"<div class='card'>"
+                            f"<b>الاسم:</b> {name} <br>"
+                            f"<b>العنوان:</b> {address} <br>"
+                            f"<b>الهاتف:</b> {phone} <br>"
+                            f"<b>التاريخ:</b> {date} <br>", unsafe_allow_html=True)
+                
+                col1, col2 = st.columns([1,1])
                 with col1:
                     if st.button(f"حذف {booking_id}", key=f"del{booking_id}"):
                         c.execute("DELETE FROM bookings WHERE id = ?", (booking_id,))
@@ -102,6 +129,7 @@ elif tab == "المسؤول":
                             )
                             conn.commit()
                             st.experimental_rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
         else:
             st.info("لا توجد حجوزات حتى الآن.")
 
