@@ -1,8 +1,6 @@
 import streamlit as st
 from datetime import datetime, date as dt_date
 
-from datetime import datetime
-
 st.set_page_config(page_title="مغسلة المتحدة للسجاد")
 
 # البيانات
@@ -34,21 +32,20 @@ if tab == "الحجز":
         name = st.text_input("الاسم")
         address = st.text_input("العنوان")
         phone = st.text_input("رقم الهاتف")
-        date = st.date_input("تاريخ الحجز")
+        booking_date = st.date_input("تاريخ الحجز")
         submit = st.form_submit_button("احجز")
 
         if submit:
-    cutoff_date = dt_date(datetime.now().year, 3, 20)
+            cutoff_date = dt_date(datetime.now().year, 3, 20)
 
-
-            if date > cutoff_date:
+            if booking_date > cutoff_date:
                 message = "❌ لا يمكن الحجز بعد يوم 20/3"
             else:
                 booking = {
                     "name": name,
                     "address": address,
                     "phone": phone,
-                    "date": date.strftime("%Y-%m-%d")
+                    "date": booking_date.strftime("%Y-%m-%d")
                 }
                 bookings.append(booking)
                 message = f"✅ تم الحجز بنجاح! الاسم: {booking['name']}, التاريخ: {booking['date']}"
@@ -58,6 +55,7 @@ elif tab == "المسؤول":
     st.markdown("### صفحة المسؤول")
     password = st.text_input("كلمة السر", type="password")
     check = st.button("دخول")
+
     if check:
         if password == ADMIN_PASSWORD:
             show_admin = True
@@ -71,8 +69,16 @@ elif tab == "المسؤول":
         else:
             st.info("لا توجد حجوزات حتى الآن.")
 
-# رسالة و Footer
+# رسالة
 if message:
-    st.markdown(f"<div style='text-align:center; color:#b85c38; font-weight:bold; margin-bottom:15px;'>{message}</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div style='text-align:center; color:#b85c38; font-weight:bold; margin-bottom:15px;'>{message}</div>",
+        unsafe_allow_html=True
+    )
 
-st.markdown("<div style='text-align:center; margin-top:30px; padding:15px; font-size:14px; color:#4b2e83; font-weight:bold;'>تحت إشراف البشمهندس مصطفى الفيشاوي</div>", unsafe_allow_html=True)
+# Footer
+st.markdown(
+    "<div style='text-align:center; margin-top:30px; padding:15px; font-size:14px; color:#4b2e83; font-weight:bold;'>"
+    "تحت إشراف البشمهندس مصطفى الفيشاوي</div>",
+    unsafe_allow_html=True
+)
