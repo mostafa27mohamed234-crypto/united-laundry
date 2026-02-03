@@ -92,6 +92,13 @@ st.markdown(f"""
 if tab == "الحجز":
     st.markdown("## 📝 حجز خدمة", unsafe_allow_html=True)
 
+    # --------- زر مسح الحجوزات (مرة واحدة) ---------
+    if st.button("🗑 مسح كل الحجوزات القديمة"):
+        c.execute("DELETE FROM bookings")
+        conn.commit()
+        st.success("✅ تم مسح كل الحجوزات القديمة")
+        st.experimental_rerun()
+
     # --------- العد التنازلي ---------
     countdown_placeholder = st.empty()
     now = datetime.now()
@@ -120,11 +127,19 @@ if tab == "الحجز":
                 if not name or not address or not phone:
                     message = "❌ برجاء استكمال البيانات"
                 else:
-                    c.execute("""INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
-                                 VALUES (?,?,?,?,?,?)""",
-                              (name,address,phone,booking_date.strftime("%Y-%m-%d"),feedback,time_slot))
-                    conn.commit()
-                    message = "✅ تم الحجز بنجاح"
+                    # --------- تحقق من الحجز اليومي ---------
+                    c.execute("""
+                        SELECT 1 FROM bookings
+                        WHERE name=? AND phone=? AND date=?
+                    """, (name, phone, booking_date.strftime("%Y-%m-%d")))
+                    if c.fetchone():
+                        message = "❌ لا يمكنك الحجز أكثر من مرة في اليوم نفسه"
+                    else:
+                        c.execute("""INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
+                                     VALUES (?,?,?,?,?,?)""",
+                                  (name,address,phone,booking_date.strftime("%Y-%m-%d"),feedback,time_slot))
+                        conn.commit()
+                        message = "✅ تم الحجز بنجاح"
     else:
         countdown_placeholder.warning("❌ انتهت فترة الحجز المتاحة حتى 10/03/2026")
         st.info("الحجز مغلق الآن")
