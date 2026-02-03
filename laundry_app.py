@@ -1,7 +1,8 @@
 import streamlit as st
-from datetime import date as dt_date, timedelta
+from datetime import date as dt_date, datetime, timedelta
 import sqlite3
 import pandas as pd
+import time
 
 # ---------------- إعداد الصفحة ----------------
 st.set_page_config(
@@ -12,6 +13,7 @@ st.set_page_config(
 
 # ---------------- اليوم ----------------
 today = dt_date.today()
+last_booking_date = dt_date(2026, 3, 10)  # آخر يوم مسموح للحجز
 
 # ---------------- قاعدة البيانات ----------------
 conn = sqlite3.connect("bookings.db", check_same_thread=False)
@@ -90,17 +92,40 @@ st.markdown(f"""
 # ================= صفحة الحجز =================
 if tab == "الحجز":
     st.markdown("## 📝 حجز خدمة", unsafe_allow_html=True)
+
+    # --------- عرض العد التنازلي الديناميكي ---------
+    countdown_placeholder = st.empty()
+    if today <= last_booking_date:
+        while True:
+            now = datetime.now()
+            end_datetime = datetime.combine(last_booking_date, datetime.max.time())
+            remaining = end_datetime - now
+            if remaining.total_seconds() <= 0:
+                countdown_placeholder.warning("❌ انتهت فترة الحجز المتاحة حتى 10/03/2026")
+                break
+            days = remaining.days
+            hours, remainder = divmod(remaining.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            countdown_placeholder.info(
+                f"⏳ الوقت المتبقي للحجز: {days} يوم {hours} ساعة {minutes} دقيقة {seconds} ثانية"
+            )
+            time.sleep(1)
+    else:
+        countdown_placeholder.warning("❌ انتهت فترة الحجز المتاحة حتى 10/03/2026")
+
     with st.form("booking_form"):
         name = st.text_input("الاسم")
         address = st.text_input("العنوان")
         phone = st.text_input("رقم الهاتف")
-        booking_date = st.date_input("التاريخ")
+        booking_date = st.date_input("التاريخ", min_value=today, max_value=last_booking_date)
         time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
         feedback = st.text_area("ملاحظات")
         submit = st.form_submit_button("تأكيد الحجز", use_container_width=True)
 
         if submit:
-            if not name or not address or not phone:
+            if today > last_booking_date:
+                message = "❌ لا يمكن الحجز بعد 10/03/2026"
+            elif not name or not address or not phone:
                 message = "❌ برجاء استكمال البيانات"
             else:
                 c.execute("""INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
