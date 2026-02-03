@@ -58,8 +58,6 @@ conn.commit()
 ADMIN_PASSWORD = "المتحده@1996"
 EMP_PASSWORD = "mostafa23"
 OWNER_NAME = "الأستاذ أكرم حموده"
-show_admin = False
-show_emp = False
 message = ""
 
 # ---------------- Sidebar ----------------
@@ -135,11 +133,11 @@ elif tab == "المسؤول":
 
     if st.button("دخول"):
         if password == ADMIN_PASSWORD:
-            show_admin = True
+            st.session_state.show_admin = True
         else:
             message = "❌ كلمة السر غير صحيحة"
 
-    if show_admin:
+    if st.session_state.get('show_admin', False):
         c.execute("SELECT name, address, phone, date, time_slot, feedback FROM bookings")
         rows = c.fetchall()
 
@@ -164,13 +162,16 @@ elif tab == "الموظفين":
     st.markdown("### 🔐 لوحة الموظفين — تسجيل الحضور")
     emp_pass = st.text_input("كلمة السر", type="password")
 
+    if 'show_emp' not in st.session_state:
+        st.session_state.show_emp = False
+
     if st.button("دخول الموظفين"):
         if emp_pass == EMP_PASSWORD:
-            show_emp = True
+            st.session_state.show_emp = True
         else:
             message = "❌ كلمة السر غير صحيحة للموظفين"
 
-    if show_emp:
+    if st.session_state.show_emp:
         st.markdown("### تسجيل الحضور")
         c.execute("SELECT id, name FROM employees")
         emps = c.fetchall()
@@ -180,17 +181,21 @@ elif tab == "الموظفين":
         days_list = [first_day + timedelta(days=i) for i in range((today - first_day).days + 1)]
         att_date = st.selectbox("اختر تاريخ الحضور", days_list, format_func=lambda x: x.strftime('%Y-%m-%d'))
 
+        attendance_data = {}
         for emp_id, emp_name in emps:
             col1, col2 = st.columns([2,3])
             with col1:
                 present = st.checkbox(f"{emp_name}", key=f"att_{emp_id}_{att_date}")
             with col2:
                 note = st.text_input(f"ملاحظات {emp_name}", key=f"note_{emp_id}_{att_date}")
-            if st.button(f"حفظ {emp_name}", key=f"save_{emp_id}_{att_date}"):
+            attendance_data[emp_id] = (present, note)
+
+        if st.button("حفظ جميع الحضور"):
+            for emp_id, (present, note) in attendance_data.items():
                 if present:
                     c.execute("INSERT INTO attendance (employee_id, date, note) VALUES (?,?,?)", (emp_id, att_date.strftime("%Y-%m-%d"), note))
-                    conn.commit()
-                    st.success(f"تم تسجيل حضور {emp_name} بتاريخ {att_date}")
+            conn.commit()
+            st.success(f"تم حفظ الحضور لجميع الموظفين بتاريخ {att_date}")
 
         if st.button("عرض التقرير الشهري"):
             c.execute("SELECT id, name, daily_rate FROM employees")
