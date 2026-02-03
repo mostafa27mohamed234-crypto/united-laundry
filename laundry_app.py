@@ -43,9 +43,9 @@ st.markdown(header_html, unsafe_allow_html=True)
 if tab == "الحجز":
     st.markdown("### صفحة الحجز")
     with st.form(key="booking_form"):
-        name = st.text_input("الاسم")
-        address = st.text_input("العنوان")
-        phone = st.text_input("رقم الهاتف")
+        name = st.text_input("الاسم", autocomplete="off")
+        address = st.text_input("العنوان", autocomplete="off")
+        phone = st.text_input("رقم الهاتف", autocomplete="off")
         booking_date = st.date_input("تاريخ الحجز")
         submit = st.form_submit_button("احجز")
 
