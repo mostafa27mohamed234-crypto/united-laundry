@@ -3,7 +3,35 @@ from datetime import date as dt_date, timedelta
 import sqlite3
 import pandas as pd
 
-st.set_page_config(page_title="مغسلة المتحدة للسجاد", layout="wide")
+# ---------------- إعداد الصفحة ----------------
+st.set_page_config(
+    page_title="🧼 مغسلة المتحدة للسجاد",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# ---------------- CSS للتنسيق والألوان ----------------
+st.markdown("""
+<style>
+body {
+    background-color: #fff8f0;
+    color: #333333;
+}
+h1 {
+    color: #e07b39;
+}
+h2, h3 {
+    color: #d65a31;
+}
+.stButton>button {
+    background-color: #e07b39;
+    color: white;
+}
+.stTextInput>div>div>input {
+    border-radius: 8px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------- اليوم ----------------
 today = dt_date.today()
@@ -12,7 +40,7 @@ today = dt_date.today()
 conn = sqlite3.connect("bookings.db", check_same_thread=False)
 c = conn.cursor()
 
-# ---------------- الجداول ----------------
+# ---------------- إنشاء الجداول ----------------
 c.execute("""
 CREATE TABLE IF NOT EXISTS bookings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,7 +52,6 @@ CREATE TABLE IF NOT EXISTS bookings (
     time_slot TEXT
 )
 """)
-
 c.execute("""
 CREATE TABLE IF NOT EXISTS employees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,7 +59,6 @@ CREATE TABLE IF NOT EXISTS employees (
     daily_rate INTEGER
 )
 """)
-
 c.execute("""
 CREATE TABLE IF NOT EXISTS attendance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +66,6 @@ CREATE TABLE IF NOT EXISTS attendance (
     date TEXT
 )
 """)
-
 c.execute("""
 CREATE TABLE IF NOT EXISTS daily_orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,7 +76,7 @@ CREATE TABLE IF NOT EXISTS daily_orders (
 """)
 conn.commit()
 
-# ---------------- الموظفين ----------------
+# ---------------- بيانات الموظفين ----------------
 employees = [
     ("مصطفى الفيشاوى", 100),
     ("وليد المالكي", 150),
@@ -74,41 +99,54 @@ message = ""
 # ---------------- Sidebar ----------------
 tab = st.sidebar.selectbox(
     "اختر الصفحة",
-    ["الحجز", "المسؤول", "الموظفين", "أوردارات اليوم"]
+    ["🏠 الرئيسية", "الحجز", "المسؤول", "الموظفين", "أوردارات اليوم"]
 )
 
 # ---------------- Header ----------------
 st.markdown(f"""
+<div style="background-color:#ffe5d4;padding:15px;border-radius:10px;">
 <h1 style="text-align:center;">🧼 مغسلة المتحدة للسجاد</h1>
-<p style="text-align:center;">👤 المسؤول: {OWNER_NAME} | 📞 01063316053</p>
-<hr>
+<h3 style="text-align:center;">👤 المسؤول: {OWNER_NAME} | 📞 01063316053</h3>
+<h2 style="text-align:center;color:#d65a31;">🌙 رمضان كريم وكل عام وأنتم بخير!</h2>
+</div>
 """, unsafe_allow_html=True)
 
-# ================= صفحة الحجز =================
-if tab == "الحجز":
-    st.subheader("📝 حجز خدمة")
-    with st.form("booking_form"):
-        name = st.text_input("الاسم")
-        address = st.text_input("العنوان")
-        phone = st.text_input("رقم الهاتف")
-        booking_date = st.date_input("التاريخ")
-        time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
-        feedback = st.text_area("ملاحظات")
-        submit = st.form_submit_button("تأكيد الحجز")
+# ---------------- Home Page ----------------
+if tab == "🏠 الرئيسية":
+    st.markdown("### أهلاً بك في نظام مغسلة المتحدة للسجاد")
+    st.markdown("يمكنك استخدام الشريط الجانبي للتنقل بين الصفحات: الحجز، المسؤول، الموظفين، وأوردارات اليوم.")
+    st.image("https://images.unsplash.com/photo-1581092334170-1f0e5ffce7f0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1050&q=80",
+             caption="مرحبًا بك في مغسلة المتحدة للسجاد", use_column_width=True)
 
-        if submit:
-            if not name or not address or not phone:
-                message = "❌ برجاء استكمال البيانات"
-            else:
-                c.execute("""INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
-                             VALUES (?,?,?,?,?,?)""",
-                          (name,address,phone,booking_date.strftime("%Y-%m-%d"),feedback,time_slot))
-                conn.commit()
-                message = "✅ تم الحجز بنجاح"
+# ================= صفحة الحجز =================
+elif tab == "الحجز":
+    st.markdown("## 📝 حجز خدمة")
+    with st.container():
+        with st.form("booking_form"):
+            col1, col2 = st.columns(2)
+            with col1:
+                name = st.text_input("الاسم")
+                address = st.text_input("العنوان")
+            with col2:
+                phone = st.text_input("رقم الهاتف")
+                booking_date = st.date_input("التاريخ", value=today)
+            time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
+            feedback = st.text_area("ملاحظات")
+            submit = st.form_submit_button("تأكيد الحجز")
+
+            if submit:
+                if not name or not address or not phone:
+                    message = "❌ برجاء استكمال البيانات"
+                else:
+                    c.execute("""INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
+                                 VALUES (?,?,?,?,?,?)""",
+                              (name,address,phone,booking_date.strftime("%Y-%m-%d"),feedback,time_slot))
+                    conn.commit()
+                    message = "✅ تم الحجز بنجاح"
 
 # ================= صفحة المسؤول =================
 elif tab == "المسؤول":
-    st.subheader("🔐 لوحة المسؤول")
+    st.markdown("## 🔐 لوحة المسؤول")
     if "admin" not in st.session_state:
         st.session_state.admin = False
 
@@ -120,13 +158,13 @@ elif tab == "المسؤول":
             st.error("❌ كلمة السر غير صحيحة")
 
     if st.session_state.admin:
-        c.execute("SELECT name,address,phone,date,time_slot,feedback FROM bookings")
-        for r in c.fetchall():
-            st.info(f"""👤 {r[0]}\n📍 {r[1]}\n📞 {r[2]}\n📅 {r[3]}\n⏰ {r[4]}\n💬 {r[5] if r[5] else '-'}""")
+        st.markdown("### 📋 الحجوزات الحالية")
+        df_bookings = pd.read_sql("SELECT name,address,phone,date,time_slot,feedback FROM bookings", conn)
+        st.dataframe(df_bookings, use_container_width=True)
 
 # ================= صفحة الموظفين =================
 elif tab == "الموظفين":
-    st.subheader("🔐 تسجيل وحساب حضور الموظفين")
+    st.markdown("## 👥 تسجيل وحساب حضور الموظفين")
     if "emp" not in st.session_state:
         st.session_state.emp = False
 
@@ -171,9 +209,33 @@ elif tab == "الموظفين":
             st.warning("🗑 تم مسح حضور هذا اليوم")
             st.experimental_rerun()
 
+        # ---------------- جدول الحضور ----------------
+        st.markdown("### 📊 جدول الحضور الشهري")
+        col_names = ['الموظف'] + [d.strftime('%d') for d in days_list] + ['أيام الحضور', 'الراتب']
+        data = []
+
+        for emp_id, emp_name, rate in emps:
+            row = [emp_name]
+            count = 0
+            for d in days_list:
+                d_str = d.strftime('%Y-%m-%d')
+                c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (emp_id, d_str))
+                present = c.fetchone()
+                if present:
+                    row.append('✓')
+                    count += 1
+                else:
+                    row.append('')
+            row.append(count)
+            row.append(count*rate)
+            data.append(row)
+
+        df = pd.DataFrame(data, columns=col_names)
+        st.dataframe(df.style.set_properties(**{'text-align': 'center'}))
+
 # ================= أوردرات اليوم =================
 elif tab == "أوردارات اليوم":
-    st.subheader("🔐 أوردرات اليوم")
+    st.markdown("## 🛒 أوردرات اليوم")
     if "orders" not in st.session_state:
         st.session_state.orders = False
 
@@ -213,4 +275,7 @@ if message:
     st.warning(message)
 
 # ---------------- Footer ----------------
-st.markdown("<hr><center>🤲 اللهم بارك لنا في عملنا</center>", unsafe_allow_html=True)
+st.markdown("""
+<hr>
+<center>🤲 اللهم بارك لنا في عملنا</center>
+""", unsafe_allow_html=True)
