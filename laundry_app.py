@@ -14,18 +14,6 @@ c = conn.cursor()
 
 # ---------------- الجداول ----------------
 c.execute("""
-CREATE TABLE IF NOT EXISTS bookings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    address TEXT,
-    phone TEXT,
-    date TEXT,
-    feedback TEXT,
-    time_slot TEXT
-)
-""")
-
-c.execute("""
 CREATE TABLE IF NOT EXISTS employees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
@@ -37,15 +25,6 @@ c.execute("""
 CREATE TABLE IF NOT EXISTS attendance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     employee_id INTEGER,
-    date TEXT
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS daily_orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_name TEXT,
-    price INTEGER,
     date TEXT
 )
 """)
@@ -67,28 +46,17 @@ for name, rate in employees:
         )
 conn.commit()
 
-# ---------------- متغيرات ----------------
-ADMIN_PASSWORD = "المتحده@1996"
 EMP_PASSWORD = "mostafa23"
-ORDERS_PASSWORD = "اكرم1996"
-OWNER_NAME = "الأستاذ أكرم حموده"
 
 # ---------------- Sidebar ----------------
 tab = st.sidebar.selectbox(
     "اختر الصفحة",
-    ["الحجز", "الموظفين", "أوردارات اليوم", "تقرير الحضور"]
+    ["الموظفين"]
 )
-
-# ---------------- Header ----------------
-st.markdown(f"""
-<h1 style="text-align:center;">🧼 مغسلة المتحدة للسجاد</h1>
-<p style="text-align:center;">👤 المسؤول: {OWNER_NAME}</p>
-<hr>
-""", unsafe_allow_html=True)
 
 # ================= صفحة الموظفين =================
 if tab == "الموظفين":
-    st.subheader("🔐 تسجيل حضور الموظفين")
+    st.subheader("🔐 تسجيل وحساب حضور الموظفين")
 
     if "emp" not in st.session_state:
         st.session_state.emp = False
@@ -102,23 +70,20 @@ if tab == "الموظفين":
             st.error("❌ كلمة السر غير صحيحة")
 
     if st.session_state.emp:
-        c.execute("SELECT id,name FROM employees")
+        c.execute("SELECT id,name,daily_rate FROM employees")
         emps = c.fetchall()
 
+        # اختيار اليوم للحضور
         first_day = dt_date(today.year, today.month, 1)
-        days = [
-            first_day + timedelta(days=i)
-            for i in range((today - first_day).days + 1)
-        ]
-
+        days_list = [first_day + timedelta(days=i) for i in range((today - first_day).days + 1)]
         selected_day = st.selectbox(
-            "اختر اليوم",
-            [d.strftime("%Y-%m-%d") for d in days]
+            "اختر اليوم لتسجيل الحضور",
+            [d.strftime("%Y-%m-%d") for d in days_list]
         )
 
+        # Checkbox لكل موظف
         attendance_state = {}
-
-        for emp_id, emp_name in emps:
+        for emp_id, emp_name, _ in emps:
             c.execute(
                 "SELECT 1 FROM attendance WHERE employee_id=? AND date=?",
                 (emp_id, selected_day)
@@ -132,7 +97,6 @@ if tab == "الموظفين":
             )
 
         col1, col2 = st.columns(2)
-
         if col1.button("💾 حفظ الحضور"):
             for emp_id, present in attendance_state.items():
                 if present:
@@ -154,110 +118,26 @@ if tab == "الموظفين":
             st.warning("🗑 تم مسح حضور هذا اليوم")
             st.experimental_rerun()
 
-# ================= تقرير الحضور =================
-elif tab == "تقرير الحضور":
-    st.subheader("📊 تقرير الحضور الشهري")
+        # ---------------- جدول الحضور الشهري ----------------
+        st.markdown("### 📊 جدول الحضور الشهري")
+        col_names = ['الموظف'] + [d.strftime('%d') for d in days_list] + ['أيام الحضور', 'الراتب']
+        data = []
 
-    month = st.selectbox(
-        "اختر الشهر",
-        range(1, 13),
-        index=today.month - 1
-    )
+        for emp_id, emp_name, rate in emps:
+            row = [emp_name]
+            count = 0
+            for d in days_list:
+                d_str = d.strftime('%Y-%m-%d')
+                c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (emp_id, d_str))
+                present = c.fetchone()
+                if present:
+                    row.append('✓')
+                    count += 1
+                else:
+                    row.append('')
+            row.append(count)
+            row.append(count * rate)
+            data.append(row)
 
-    year = st.selectbox(
-        "اختر السنة",
-        range(2024, today.year + 1),
-        index=(today.year - 2024)
-    )
-
-    start_date = dt_date(year, month, 1)
-    end_date = (
-        dt_date(year + 1, 1, 1)
-        if month == 12
-        else dt_date(year, month + 1, 1)
-    )
-
-    query = """
-    SELECT e.name, e.daily_rate, COUNT(a.id) as days
-    FROM employees e
-    LEFT JOIN attendance a
-    ON e.id = a.employee_id
-    AND a.date >= ? AND a.date < ?
-    GROUP BY e.id
-    """
-
-    df = pd.read_sql_query(
-        query,
-        conn,
-        params=(
-            start_date.strftime("%Y-%m-%d"),
-            end_date.strftime("%Y-%m-%d")
-        )
-    )
-
-    df["المستحق"] = df["daily_rate"] * df["days"]
-    df.columns = ["الموظف", "اليومية", "عدد أيام الحضور", "المستحق"]
-
-    st.dataframe(df, use_container_width=True)
-
-    if st.button("🗑 مسح حضور الشهر بالكامل"):
-        c.execute(
-            "DELETE FROM attendance WHERE date >= ? AND date < ?",
-            (
-                start_date.strftime("%Y-%m-%d"),
-                end_date.strftime("%Y-%m-%d")
-            )
-        )
-        conn.commit()
-        st.error("❌ تم مسح حضور الشهر بالكامل")
-        st.experimental_rerun()
-
-# ================= أوردرات اليوم =================
-elif tab == "أوردارات اليوم":
-    st.subheader("🔐 أوردرات اليوم")
-
-    if "orders" not in st.session_state:
-        st.session_state.orders = False
-
-    order_pass = st.text_input("كلمة السر", type="password")
-
-    if st.button("دخول أوردرات اليوم"):
-        if order_pass == ORDERS_PASSWORD:
-            st.session_state.orders = True
-        else:
-            st.error("❌ كلمة السر غير صحيحة")
-
-    if st.session_state.orders:
-        with st.form("order_form"):
-            name = st.text_input("اسم الأوردر")
-            price = st.number_input("السعر", min_value=0)
-            add = st.form_submit_button("إضافة")
-
-            if add and name and price > 0:
-                c.execute(
-                    "INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)",
-                    (name, price, today.strftime("%Y-%m-%d"))
-                )
-                conn.commit()
-                st.success("✅ تم إضافة الأوردر")
-
-        c.execute(
-            "SELECT id,order_name,price FROM daily_orders WHERE date=?",
-            (today.strftime("%Y-%m-%d"),)
-        )
-
-        total = 0
-        for oid, n, p in c.fetchall():
-            total += p
-            col1, col2, col3 = st.columns([4, 2, 1])
-            col1.write(n)
-            col2.write(f"{p} جنيه")
-            if col3.button("❌", key=oid):
-                c.execute("DELETE FROM daily_orders WHERE id=?", (oid,))
-                conn.commit()
-                st.experimental_rerun()
-
-        st.markdown(f"## 💰 إجمالي اليوم: **{total} جنيه**")
-
-# ---------------- Footer ----------------
-st.markdown("<hr><center>🤲 اللهم بارك لنا في عملنا</center>", unsafe_allow_html=True)
+        df = pd.DataFrame(data, columns=col_names)
+        st.dataframe(df.style.set_properties(**{'text-align': 'center'}))
