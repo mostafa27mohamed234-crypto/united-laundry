@@ -1,22 +1,28 @@
 import streamlit as st
 from datetime import datetime, date as dt_date
-import csv
-import os
+import sqlite3
 
 st.set_page_config(page_title="مغسلة المتحدة للسجاد")
 
-# البيانات
-bookings = []
+# إعداد قاعدة البيانات
+conn = sqlite3.connect("bookings.db", check_same_thread=False)
+c = conn.cursor()
+c.execute("""
+CREATE TABLE IF NOT EXISTS bookings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    address TEXT,
+    phone TEXT,
+    date TEXT
+)
+""")
+conn.commit()
+
+# كلمة سر المسؤول
 ADMIN_PASSWORD = "المتحده@1996"
 show_admin = False
 tab = st.sidebar.selectbox("اختر الصفحة", ["الحجز", "المسؤول"])
 message = ""
-
-# تحميل الحجوزات من ملف CSV لو موجود
-if os.path.exists("bookings.csv"):
-    with open("bookings.csv", newline='', encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        bookings = list(reader)
 
 # HTML ثابت
 header_html = """
@@ -33,7 +39,7 @@ header_html = """
 
 st.markdown(header_html, unsafe_allow_html=True)
 
-# صفحة الحجز
+# ---------------- صفحة الحجز ----------------
 if tab == "الحجز":
     st.markdown("### صفحة الحجز")
     with st.form(key="booking_form"):
@@ -45,26 +51,18 @@ if tab == "الحجز":
 
         if submit:
             cutoff_date = dt_date(datetime.now().year, 3, 20)
-
             if booking_date > cutoff_date:
                 message = "❌ لا يمكن الحجز بعد يوم 20/3"
             else:
-                booking = {
-                    "name": name,
-                    "address": address,
-                    "phone": phone,
-                    "date": booking_date.strftime("%Y-%m-%d")
-                }
-                bookings.append(booking)
-                message = f"✅ تم الحجز بنجاح! الاسم: {booking['name']}, التاريخ: {booking['date']}"
+                # حفظ البيانات في قاعدة البيانات
+                c.execute(
+                    "INSERT INTO bookings (name, address, phone, date) VALUES (?, ?, ?, ?)",
+                    (name, address, phone, booking_date.strftime("%Y-%m-%d"))
+                )
+                conn.commit()
+                message = f"✅ تم الحجز بنجاح! الاسم: {name}, التاريخ: {booking_date.strftime('%Y-%m-%d')}"
 
-                # حفظ كل الحجوزات في CSV
-                with open("bookings.csv", "w", newline='', encoding="utf-8") as f:
-                    writer = csv.DictWriter(f, fieldnames=["name", "address", "phone", "date"])
-                    writer.writeheader()
-                    writer.writerows(bookings)
-
-# صفحة المسؤول
+# ---------------- صفحة المسؤول ----------------
 elif tab == "المسؤول":
     st.markdown("### صفحة المسؤول")
     password = st.text_input("كلمة السر", type="password")
@@ -78,22 +76,47 @@ elif tab == "المسؤول":
 
     if show_admin:
         st.markdown("### الحجوزات")
-        if bookings:
-            st.table(bookings)
+        c.execute("SELECT id, name, address, phone, date FROM bookings")
+        rows = c.fetchall()
+
+        if rows:
+            for r in rows:
+                booking_id, name, address, phone, date = r
+                st.markdown(f"**الاسم:** {name} | **العنوان:** {address} | **الهاتف:** {phone} | **التاريخ:** {date}")
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    if st.button(f"حذف {booking_id}", key=f"del{booking_id}"):
+                        c.execute("DELETE FROM bookings WHERE id = ?", (booking_id,))
+                        conn.commit()
+                        st.experimental_rerun()
+                with col2:
+                    with st.expander("تعديل"):
+                        new_name = st.text_input("الاسم الجديد", value=name, key=f"name{booking_id}")
+                        new_address = st.text_input("العنوان الجديد", value=address, key=f"address{booking_id}")
+                        new_phone = st.text_input("الهاتف الجديد", value=phone, key=f"phone{booking_id}")
+                        new_date = st.date_input("التاريخ الجديد", value=datetime.strptime(date, "%Y-%m-%d"), key=f"date{booking_id}")
+                        if st.button(f"تحديث {booking_id}", key=f"update{booking_id}"):
+                            c.execute(
+                                "UPDATE bookings SET name=?, address=?, phone=?, date=? WHERE id=?",
+                                (new_name, new_address, new_phone, new_date.strftime("%Y-%m-%d"), booking_id)
+                            )
+                            conn.commit()
+                            st.experimental_rerun()
         else:
             st.info("لا توجد حجوزات حتى الآن.")
 
-# رسالة
+# ---------------- رسالة ----------------
 if message:
     st.markdown(
         f"<div style='text-align:center; color:#b85c38; font-weight:bold; margin-bottom:15px;'>{message}</div>",
         unsafe_allow_html=True
     )
 
-# Footer
+# ---------------- Footer ----------------
 st.markdown(
     "<div style='text-align:center; margin-top:30px; padding:15px; font-size:14px; color:#4b2e83; font-weight:bold;'>"
     "تحت إشراف البشمهندس مصطفى الفيشاوي</div>",
     unsafe_allow_html=True
 )
+
 
