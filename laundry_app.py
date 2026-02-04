@@ -175,77 +175,62 @@ tabs = st.tabs(["📝 الحجز", "🔐 المسؤول", "👷 الموظفين
 
 # ================= صفحة الحجز =================
 with tabs[0]:
-    if "done" not in st.session_state:
-        st.session_state.done = False
+    now = datetime.now()
+    end_datetime = datetime.combine(last_booking_date, datetime.max.time())
+    remaining = end_datetime - now
 
-    if not st.session_state.done:
-        now = datetime.now()
-        end_datetime = datetime.combine(last_booking_date, datetime.max.time())
-        remaining = end_datetime - now
+    if remaining.total_seconds() > 0:
+        d = remaining.days
+        h, r = divmod(remaining.seconds, 3600)
+        m, s = divmod(r, 60)
+        st.info(f"⏳ متبقي للحجز: {d} يوم {h} ساعة {m} دقيقة {s} ثانية")
 
-        if remaining.total_seconds() > 0:
-            d = remaining.days
-            h, r = divmod(remaining.seconds, 3600)
-            m, s = divmod(r, 60)
-            st.info(f"⏳ متبقي للحجز: {d} يوم {h} ساعة {m} دقيقة {s} ثانية")
+        with st.form("booking"):
+            name = st.text_input("الاسم")
+            address = st.text_input("العنوان")
+            phone = st.text_input("رقم الهاتف")
+            booking_date = st.date_input("التاريخ", max_value=last_booking_date)
+            time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
+            feedback = st.text_area("ملاحظات")
+            submit = st.form_submit_button("تأكيد الحجز")
 
-            with st.form("booking"):
-                name = st.text_input("الاسم")
-                address = st.text_input("العنوان")
-                phone = st.text_input("رقم الهاتف")
-                booking_date = st.date_input("التاريخ", max_value=last_booking_date)
-                time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
-                feedback = st.text_area("ملاحظات")
-                submit = st.form_submit_button("تأكيد الحجز")
+            if submit and name and address and phone:
+                c.execute(
+                    "SELECT 1 FROM bookings WHERE name=? AND phone=? AND date=?",
+                    (name, phone, booking_date.strftime("%Y-%m-%d"))
+                )
+                if c.fetchone():
+                    st.error("❌ لا يمكن الحجز مرتين في نفس اليوم")
+                else:
+                    c.execute("""
+                    INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
+                    VALUES (?,?,?,?,?,?)
+                    """, (
+                        name, address, phone,
+                        booking_date.strftime("%Y-%m-%d"),
+                        feedback, time_slot
+                    ))
+                    conn.commit()
 
-                if submit and name and address and phone:
-                    c.execute(
-                        "SELECT 1 FROM bookings WHERE name=? AND phone=? AND date=?",
-                        (name, phone, booking_date.strftime("%Y-%m-%d"))
-                    )
-                    if c.fetchone():
-                        st.error("❌ لا يمكن الحجز مرتين في نفس اليوم")
-                    else:
-                        c.execute("""
-                        INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
-                        VALUES (?,?,?,?,?,?)
-                        """, (
-                            name, address, phone,
-                            booking_date.strftime("%Y-%m-%d"),
-                            feedback, time_slot
-                        ))
-                        conn.commit()
-
-                        st.session_state.done = True
-                        st.session_state.data = {
-                            "name": name,
-                            "address": address,
-                            "phone": phone,
-                            "date": booking_date.strftime("%Y-%m-%d"),
-                            "time": time_slot,
-                            "feedback": feedback
-                        }
-                        st.experimental_rerun()
-        else:
-            st.error("❌ انتهت فترة الحجز")
+                    # ---------------- عرض رسالة الشكر بدون rerun ----------------
+                    st.markdown(f"""
+                    <div class="success-card">
+                        <h1>✅ تم تأكيد الحجز بنجاح</h1>
+                        <h3>شكرًا لاختياركم مغسلة المتحدة للسجاد 🌸</h3>
+                        <hr>
+                        <p><b>👤 الاسم:</b> {name}</p>
+                        <p><b>📍 العنوان:</b> {address}</p>
+                        <p><b>📞 الهاتف:</b> {phone}</p>
+                        <p><b>📅 التاريخ:</b> {booking_date.strftime("%Y-%m-%d")}</p>
+                        <p><b>⏰ الوقت:</b> {time_slot}</p>
+                        <p><b>📝 ملاحظات:</b> {feedback or "—"}</p>
+                        <br>
+                        <p>📞 للاستفسار: {CONTACT_PHONE}</p>
+                        <p>🌙 كل عام وأنتم بخير</p>
+                    </div>
+                    """, unsafe_allow_html=True)
     else:
-        d = st.session_state.data
-        st.markdown(f"""
-        <div class="success-card">
-            <h1>✅ تم تأكيد الحجز بنجاح</h1>
-            <h3>شكرًا لاختياركم مغسلة المتحدة للسجاد 🌸</h3>
-            <hr>
-            <p><b>👤 الاسم:</b> {d['name']}</p>
-            <p><b>📍 العنوان:</b> {d['address']}</p>
-            <p><b>📞 الهاتف:</b> {d['phone']}</p>
-            <p><b>📅 التاريخ:</b> {d['date']}</p>
-            <p><b>⏰ الوقت:</b> {d['time']}</p>
-            <p><b>📝 ملاحظات:</b> {d['feedback'] or "—"}</p>
-            <br>
-            <p>📞 للاستفسار: {CONTACT_PHONE}</p>
-            <p>🌙 كل عام وأنتم بخير</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.error("❌ انتهت فترة الحجز")
 
 # ================= صفحة المسؤول =================
 with tabs[1]:
