@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import date as dt_date, datetime, timedelta
+from datetime import date as dt_date, datetime
 import sqlite3
 import pandas as pd
 
@@ -8,6 +8,10 @@ st.set_page_config(
     page_title="🧼 مغسلة المتحدة للسجاد",
     layout="wide"
 )
+
+# ---------------- رقم التواصل + العنوان ----------------
+CONTACT_PHONE = "01063316053"
+CONTACT_ADDRESS = "الشؤون الاجتماعية"
 
 # ---------------- إخفاء واجهة Streamlit ----------------
 st.markdown("""
@@ -23,12 +27,7 @@ footer {visibility: hidden;}
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(135deg,
-        #E3F2FD,
-        #BBDEFB,
-        #90CAF9,
-        #64B5F6
-    );
+    background: linear-gradient(135deg,#E3F2FD,#BBDEFB,#90CAF9,#64B5F6);
     font-family: 'Cairo', sans-serif;
 }
 
@@ -40,23 +39,15 @@ div[data-testid="stVerticalBlock"] > div {
     box-shadow: 0 8px 25px rgba(0,0,0,0.12);
 }
 
-h1, h2, h3 {
-    color: #0D47A1;
-    text-align: center;
-}
+h1, h2, h3 { color: #0D47A1; text-align: center; }
 
 .stButton > button {
-    background: linear-gradient(90deg, #1E88E5, #42A5F5);
+    background: linear-gradient(90deg,#1E88E5,#42A5F5);
     color: white;
     border-radius: 14px;
     font-size: 16px;
     padding: 10px 22px;
     border: none;
-}
-
-.stButton > button:hover {
-    background: linear-gradient(90deg, #1565C0, #1E88E5);
-    transform: scale(1.04);
 }
 
 input, textarea {
@@ -65,12 +56,30 @@ input, textarea {
 }
 
 .ramadan-box {
-    background: linear-gradient(135deg, #1A237E, #283593);
+    background: linear-gradient(135deg,#1A237E,#283593);
     color: white;
-    padding: 25px;
+    padding: 28px;
     border-radius: 22px;
     text-align: center;
     margin-bottom: 30px;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.3);
+}
+
+.phone-box {
+    background: rgba(255,255,255,0.15);
+    padding: 12px;
+    border-radius: 14px;
+    margin-top: 10px;
+    font-size: 18px;
+}
+
+.success-card {
+    background: linear-gradient(135deg,#2E7D32,#66BB6A);
+    color: white;
+    padding: 30px;
+    border-radius: 25px;
+    text-align: center;
+    margin-top: 30px;
     box-shadow: 0 12px 35px rgba(0,0,0,0.3);
 }
 </style>
@@ -84,7 +93,6 @@ last_booking_date = dt_date(2026, 3, 10)
 conn = sqlite3.connect("bookings.db", check_same_thread=False)
 c = conn.cursor()
 
-# ---------------- الجداول ----------------
 c.execute("""
 CREATE TABLE IF NOT EXISTS bookings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,75 +104,26 @@ CREATE TABLE IF NOT EXISTS bookings (
     time_slot TEXT
 )
 """)
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS employees (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    daily_rate INTEGER
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS attendance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER,
-    date TEXT
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS salary_deductions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER,
-    amount INTEGER,
-    reason TEXT,
-    date TEXT
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS daily_orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_name TEXT,
-    price INTEGER,
-    date TEXT
-)
-""")
 conn.commit()
 
-# ---------------- الموظفين ----------------
-employees = [
-    ("مصطفى الفيشاوى", 100),
-    ("وليد المالكي", 150),
-    ("ابراهيم بكير", 150)
-]
-for name, rate in employees:
-    c.execute("SELECT id FROM employees WHERE name=?", (name,))
-    if not c.fetchone():
-        c.execute("INSERT INTO employees (name,daily_rate) VALUES (?,?)", (name, rate))
-conn.commit()
-
-# ---------------- كلمات السر ----------------
-ADMIN_PASSWORD = "المتحده@1996"
-EMP_PASSWORD = "mostafa23"
-ORDERS_PASSWORD = "اكرم1996"
-OWNER_NAME = "الأستاذ أكرم حموده"
-
-# ---------------- هيدر + رمضان ----------------
+# ---------------- هيدر + رمضان + رقم التليفون + العنوان ----------------
 st.markdown(f"""
 <div class="ramadan-box">
     <h1>🧼 مغسلة المتحدة للسجاد</h1>
-    <h3>👤 المسؤول: {OWNER_NAME}</h3>
+    <h3>📍 العنوان: {CONTACT_ADDRESS}</h3>
+    <div class="phone-box">
+        📞 للتواصل والحجز: <b>{CONTACT_PHONE}</b>
+    </div>
     <h2>🌙 رمضان كريم 🌙</h2>
-    <p>🕌 ✨ 🏮 ✨ 🕌</p>
+    <p style="margin-top:10px;">🕌 ✨ 🏮 ✨ 🕌</p>
 </div>
 """, unsafe_allow_html=True)
 
-tabs = st.tabs(["📝 الحجز", "🔐 المسؤول", "👷 الموظفين", "📦 أوردرات اليوم"])
-
 # ================= الحجز =================
-with tabs[0]:
+if "done" not in st.session_state:
+    st.session_state.done = False
+
+if not st.session_state.done:
     now = datetime.now()
     end_datetime = datetime.combine(last_booking_date, datetime.max.time())
     remaining = end_datetime - now
@@ -195,78 +154,45 @@ with tabs[0]:
                     c.execute("""
                     INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
                     VALUES (?,?,?,?,?,?)
-                    """, (name, address, phone, booking_date.strftime("%Y-%m-%d"), feedback, time_slot))
+                    """, (
+                        name,
+                        address,
+                        phone,
+                        booking_date.strftime("%Y-%m-%d"),
+                        feedback,
+                        time_slot
+                    ))
                     conn.commit()
-                    st.success("✅ تم الحجز بنجاح")
+
+                    st.session_state.done = True
+                    st.session_state.data = {
+                        "name": name,
+                        "address": address,
+                        "phone": phone,
+                        "date": booking_date.strftime("%Y-%m-%d"),
+                        "time": time_slot,
+                        "feedback": feedback
+                    }
+                    st.experimental_rerun()
     else:
         st.error("❌ انتهت فترة الحجز")
 
-# ================= المسؤول =================
-with tabs[1]:
-    password = st.text_input("كلمة سر المسؤول", type="password")
-    if password == ADMIN_PASSWORD:
-        df = pd.read_sql("SELECT name,address,phone,date,time_slot FROM bookings", conn)
-        st.dataframe(df)
-
-# ================= الموظفين =================
-with tabs[2]:
-    password = st.text_input("كلمة سر الموظفين", type="password")
-    if password == EMP_PASSWORD:
-        c.execute("SELECT id,name,daily_rate FROM employees")
-        emps = c.fetchall()
-
-        st.markdown("### تسجيل الحضور")
-        day = st.date_input("اليوم")
-
-        for emp_id, emp_name, _ in emps:
-            if st.checkbox(emp_name, key=f"a{emp_id}"):
-                c.execute(
-                    "INSERT OR IGNORE INTO attendance (employee_id,date) VALUES (?,?)",
-                    (emp_id, day.strftime("%Y-%m-%d"))
-                )
-        conn.commit()
-
-        st.markdown("### خصم من المرتب")
-        emp_map = {name: emp_id for emp_id, name, _ in emps}
-        emp = st.selectbox("الموظف", emp_map.keys())
-        amount = st.number_input("قيمة الخصم", min_value=0)
-        reason = st.text_input("سبب الخصم")
-
-        if st.button("تنفيذ الخصم"):
-            c.execute("""
-            INSERT INTO salary_deductions (employee_id,amount,reason,date)
-            VALUES (?,?,?,?)
-            """, (emp_map[emp], amount, reason, today.strftime("%Y-%m-%d")))
-            conn.commit()
-            st.success("✅ تم الخصم")
-
-        rows = []
-        for emp_id, emp_name, rate in emps:
-            days = c.execute(
-                "SELECT COUNT(*) FROM attendance WHERE employee_id=?",
-                (emp_id,)
-            ).fetchone()[0]
-            deductions = c.execute(
-                "SELECT COALESCE(SUM(amount),0) FROM salary_deductions WHERE employee_id=?",
-                (emp_id,)
-            ).fetchone()[0]
-            salary = days * rate - deductions
-            rows.append([emp_name, days, deductions, salary])
-
-        st.dataframe(pd.DataFrame(
-            rows, columns=["الموظف", "أيام الحضور", "إجمالي الخصم", "المرتب النهائي"]
-        ))
-
-# ================= أوردرات اليوم =================
-with tabs[3]:
-    password = st.text_input("كلمة سر الأوردرات", type="password")
-    if password == ORDERS_PASSWORD:
-        name = st.text_input("اسم الأوردر")
-        price = st.number_input("السعر", min_value=0)
-        if st.button("إضافة"):
-            c.execute(
-                "INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)",
-                (name, price, today.strftime("%Y-%m-%d"))
-            )
-            conn.commit()
-            st.success("✅ تمت الإضافة")
+# -------- رسالة الشكر --------
+else:
+    d = st.session_state.data
+    st.markdown(f"""
+    <div class="success-card">
+        <h1>✅ تم تأكيد الحجز بنجاح</h1>
+        <h3>شكرًا لاختياركم مغسلة المتحدة للسجاد 🌸</h3>
+        <hr>
+        <p><b>👤 الاسم:</b> {d['name']}</p>
+        <p><b>📍 العنوان:</b> {d['address']}</p>
+        <p><b>📞 الهاتف:</b> {d['phone']}</p>
+        <p><b>📅 التاريخ:</b> {d['date']}</p>
+        <p><b>⏰ الوقت:</b> {d['time']}</p>
+        <p><b>📝 ملاحظات:</b> {d['feedback'] or "—"}</p>
+        <br>
+        <p>📞 للاستفسار: {CONTACT_PHONE}</p>
+        <p>🌙 كل عام وأنتم بخير</p>
+    </div>
+    """, unsafe_allow_html=True)
