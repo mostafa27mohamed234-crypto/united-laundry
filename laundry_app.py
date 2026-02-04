@@ -9,6 +9,16 @@ st.set_page_config(
     layout="wide"
 )
 
+# ---------------- إخفاء واجهة Streamlit ----------------
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
+.stDeployButton {display:none;}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------- اليوم ----------------
 today = dt_date.today()
 last_booking_date = dt_date(2026, 3, 10)
@@ -93,6 +103,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# ---------------- التبويبات الداخلية ----------------
 tabs = st.tabs(["📝 الحجز", "🔐 المسؤول", "👷 الموظفين", "📦 أوردرات اليوم"])
 
 # ================= الحجز =================
@@ -102,10 +113,10 @@ with tabs[0]:
     remaining = end_datetime - now
 
     if remaining.total_seconds() > 0:
-        days = remaining.days
-        hours, rem = divmod(remaining.seconds, 3600)
-        minutes, seconds = divmod(rem, 60)
-        st.info(f"⏳ متبقي: {days} يوم {hours} ساعة {minutes} دقيقة {seconds} ثانية")
+        d = remaining.days
+        h, r = divmod(remaining.seconds, 3600)
+        m, s = divmod(r, 60)
+        st.info(f"⏳ متبقي للحجز: {d} يوم {h} ساعة {m} دقيقة {s} ثانية")
 
         with st.form("booking"):
             name = st.text_input("الاسم")
@@ -117,9 +128,10 @@ with tabs[0]:
             submit = st.form_submit_button("تأكيد")
 
             if submit and name and address and phone:
-                c.execute("""
-                SELECT 1 FROM bookings WHERE name=? AND phone=? AND date=?
-                """, (name, phone, booking_date.strftime("%Y-%m-%d")))
+                c.execute(
+                    "SELECT 1 FROM bookings WHERE name=? AND phone=? AND date=?",
+                    (name, phone, booking_date.strftime("%Y-%m-%d"))
+                )
                 if c.fetchone():
                     st.error("لا يمكن الحجز مرتين في نفس اليوم")
                 else:
@@ -128,9 +140,9 @@ with tabs[0]:
                     VALUES (?,?,?,?,?,?)
                     """, (name, address, phone, booking_date.strftime("%Y-%m-%d"), feedback, time_slot))
                     conn.commit()
-                    st.success("تم الحجز بنجاح")
+                    st.success("✅ تم الحجز بنجاح")
     else:
-        st.error("انتهى الحجز")
+        st.error("❌ انتهت فترة الحجز")
 
 # ================= المسؤول =================
 with tabs[1]:
@@ -147,40 +159,46 @@ with tabs[2]:
         emps = c.fetchall()
 
         st.markdown("### تسجيل الحضور")
-        selected_day = st.date_input("اليوم")
+        day = st.date_input("اليوم")
 
         for emp_id, emp_name, _ in emps:
-            present = st.checkbox(emp_name, key=f"a{emp_id}")
-            if present:
-                c.execute("INSERT OR IGNORE INTO attendance (employee_id,date) VALUES (?,?)",
-                          (emp_id, selected_day.strftime("%Y-%m-%d")))
+            if st.checkbox(emp_name, key=f"a{emp_id}"):
+                c.execute(
+                    "INSERT OR IGNORE INTO attendance (employee_id,date) VALUES (?,?)",
+                    (emp_id, day.strftime("%Y-%m-%d"))
+                )
         conn.commit()
 
         st.markdown("### خصم من المرتب")
-        emp_names = {name: emp_id for emp_id, name, _ in emps}
-        emp_sel = st.selectbox("الموظف", emp_names.keys())
-        amount = st.number_input("مبلغ الخصم", min_value=0)
-        reason = st.text_input("سبب الخصم")
+        emp_map = {name: emp_id for emp_id, name, _ in emps}
+        emp = st.selectbox("الموظف", emp_map.keys())
+        amount = st.number_input("قيمة الخصم", min_value=0)
+        reason = st.text_input("السبب")
 
-        if st.button("خصم"):
+        if st.button("تنفيذ الخصم"):
             c.execute("""
             INSERT INTO salary_deductions (employee_id,amount,reason,date)
             VALUES (?,?,?,?)
-            """, (emp_names[emp_sel], amount, reason, today.strftime("%Y-%m-%d")))
+            """, (emp_map[emp], amount, reason, today.strftime("%Y-%m-%d")))
             conn.commit()
-            st.success("تم الخصم")
+            st.success("✅ تم الخصم")
 
-        st.markdown("### المرتبات")
         rows = []
         for emp_id, emp_name, rate in emps:
-            days = c.execute("SELECT COUNT(*) FROM attendance WHERE employee_id=?", (emp_id,)).fetchone()[0]
-            deductions = c.execute("SELECT COALESCE(SUM(amount),0) FROM salary_deductions WHERE employee_id=?",
-                                   (emp_id,)).fetchone()[0]
+            days = c.execute(
+                "SELECT COUNT(*) FROM attendance WHERE employee_id=?",
+                (emp_id,)
+            ).fetchone()[0]
+            deductions = c.execute(
+                "SELECT COALESCE(SUM(amount),0) FROM salary_deductions WHERE employee_id=?",
+                (emp_id,)
+            ).fetchone()[0]
             salary = days * rate - deductions
             rows.append([emp_name, days, deductions, salary])
 
-        df = pd.DataFrame(rows, columns=["الموظف", "أيام الحضور", "إجمالي الخصم", "المرتب"])
-        st.dataframe(df)
+        st.dataframe(pd.DataFrame(
+            rows, columns=["الموظف", "أيام الحضور", "إجمالي الخصم", "المرتب النهائي"]
+        ))
 
 # ================= أوردرات اليوم =================
 with tabs[3]:
@@ -189,7 +207,9 @@ with tabs[3]:
         name = st.text_input("اسم الأوردر")
         price = st.number_input("السعر", min_value=0)
         if st.button("إضافة"):
-            c.execute("INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)",
-                      (name, price, today.strftime("%Y-%m-%d")))
+            c.execute(
+                "INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)",
+                (name, price, today.strftime("%Y-%m-%d"))
+            )
             conn.commit()
             st.success("تمت الإضافة")
