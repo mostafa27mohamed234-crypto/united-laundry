@@ -19,6 +19,63 @@ footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
+# ---------------- ستايل الموقع + رمضان ----------------
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(135deg,
+        #E3F2FD,
+        #BBDEFB,
+        #90CAF9,
+        #64B5F6
+    );
+    font-family: 'Cairo', sans-serif;
+}
+
+div[data-testid="stForm"],
+div[data-testid="stVerticalBlock"] > div {
+    background-color: rgba(255,255,255,0.88);
+    padding: 20px;
+    border-radius: 18px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+h1, h2, h3 {
+    color: #0D47A1;
+    text-align: center;
+}
+
+.stButton > button {
+    background: linear-gradient(90deg, #1E88E5, #42A5F5);
+    color: white;
+    border-radius: 14px;
+    font-size: 16px;
+    padding: 10px 22px;
+    border: none;
+}
+
+.stButton > button:hover {
+    background: linear-gradient(90deg, #1565C0, #1E88E5);
+    transform: scale(1.04);
+}
+
+input, textarea {
+    border-radius: 10px !important;
+    border: 1px solid #90CAF9 !important;
+}
+
+.ramadan-box {
+    background: linear-gradient(135deg, #1A237E, #283593);
+    color: white;
+    padding: 25px;
+    border-radius: 22px;
+    text-align: center;
+    margin-bottom: 30px;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.3);
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------- اليوم ----------------
 today = dt_date.today()
 last_booking_date = dt_date(2026, 3, 10)
@@ -94,16 +151,16 @@ EMP_PASSWORD = "mostafa23"
 ORDERS_PASSWORD = "اكرم1996"
 OWNER_NAME = "الأستاذ أكرم حموده"
 
-# ---------------- Header ----------------
+# ---------------- هيدر + رمضان ----------------
 st.markdown(f"""
-<div style="text-align:center; background-color:#FFF3E0; padding:20px; border-radius:15px;">
-    <h1 style="color:#FF6F00;">🧼 مغسلة المتحدة للسجاد</h1>
-    <h3 style="color:#E65100;">👤 المسؤول: {OWNER_NAME}</h3>
-    <h2 style="color:#D32F2F;">🌙 رمضان كريم 🌙</h2>
+<div class="ramadan-box">
+    <h1>🧼 مغسلة المتحدة للسجاد</h1>
+    <h3>👤 المسؤول: {OWNER_NAME}</h3>
+    <h2>🌙 رمضان كريم 🌙</h2>
+    <p>🕌 ✨ 🏮 ✨ 🕌</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- التبويبات الداخلية ----------------
 tabs = st.tabs(["📝 الحجز", "🔐 المسؤول", "👷 الموظفين", "📦 أوردرات اليوم"])
 
 # ================= الحجز =================
@@ -125,7 +182,7 @@ with tabs[0]:
             booking_date = st.date_input("التاريخ", max_value=last_booking_date)
             time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
             feedback = st.text_area("ملاحظات")
-            submit = st.form_submit_button("تأكيد")
+            submit = st.form_submit_button("تأكيد الحجز")
 
             if submit and name and address and phone:
                 c.execute(
@@ -133,7 +190,7 @@ with tabs[0]:
                     (name, phone, booking_date.strftime("%Y-%m-%d"))
                 )
                 if c.fetchone():
-                    st.error("لا يمكن الحجز مرتين في نفس اليوم")
+                    st.error("❌ لا يمكن الحجز مرتين في نفس اليوم")
                 else:
                     c.execute("""
                     INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
@@ -146,12 +203,12 @@ with tabs[0]:
 
 # ================= المسؤول =================
 with tabs[1]:
-    password = st.text_input("كلمة السر", type="password")
+    password = st.text_input("كلمة سر المسؤول", type="password")
     if password == ADMIN_PASSWORD:
         df = pd.read_sql("SELECT name,address,phone,date,time_slot FROM bookings", conn)
         st.dataframe(df)
 
-# ================= الموظفين + الخصومات =================
+# ================= الموظفين =================
 with tabs[2]:
     password = st.text_input("كلمة سر الموظفين", type="password")
     if password == EMP_PASSWORD:
@@ -173,7 +230,7 @@ with tabs[2]:
         emp_map = {name: emp_id for emp_id, name, _ in emps}
         emp = st.selectbox("الموظف", emp_map.keys())
         amount = st.number_input("قيمة الخصم", min_value=0)
-        reason = st.text_input("السبب")
+        reason = st.text_input("سبب الخصم")
 
         if st.button("تنفيذ الخصم"):
             c.execute("""
@@ -212,4 +269,4 @@ with tabs[3]:
                 (name, price, today.strftime("%Y-%m-%d"))
             )
             conn.commit()
-            st.success("تمت الإضافة")
+            st.success("✅ تمت الإضافة")
