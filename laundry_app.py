@@ -76,16 +76,6 @@ input, textarea {
     margin-top: 10px;
     font-size: 18px;
 }
-
-.success-card {
-    background: linear-gradient(135deg,#2E7D32,#66BB6A);
-    color: white;
-    padding: 30px;
-    border-radius: 25px;
-    text-align: center;
-    margin-top: 30px;
-    box-shadow: 0 12px 35px rgba(0,0,0,0.3);
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -98,61 +88,20 @@ conn = sqlite3.connect("bookings.db", check_same_thread=False)
 c = conn.cursor()
 
 # ---------------- إنشاء الجداول ----------------
-c.execute("""
-CREATE TABLE IF NOT EXISTS bookings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    address TEXT,
-    phone TEXT,
-    date TEXT,
-    feedback TEXT,
-    time_slot TEXT
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS employees (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    daily_rate INTEGER
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS attendance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER,
-    date TEXT
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS salary_deductions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER,
-    amount INTEGER,
-    reason TEXT,
-    date TEXT
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS daily_orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_name TEXT,
-    price INTEGER,
-    date TEXT
-)
-""")
+c.execute("CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, address TEXT, phone TEXT, date TEXT, feedback TEXT, time_slot TEXT)")
+c.execute("CREATE TABLE IF NOT EXISTS employees (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, daily_rate INTEGER)")
+c.execute("CREATE TABLE IF NOT EXISTS attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, employee_id INTEGER, date TEXT)")
+c.execute("CREATE TABLE IF NOT EXISTS salary_deductions (id INTEGER PRIMARY KEY AUTOINCREMENT, employee_id INTEGER, amount INTEGER, reason TEXT, date TEXT)")
+c.execute("CREATE TABLE IF NOT EXISTS daily_orders (id INTEGER PRIMARY KEY AUTOINCREMENT, order_name TEXT, price INTEGER, date TEXT)")
 conn.commit()
 
 # ---------------- الموظفين ----------------
-employees = [
+employees_list = [
     ("مصطفى الفيشاوى", 100),
     ("وليد المالكي", 150),
     ("ابراهيم بكير", 150)
 ]
-for name, rate in employees:
+for name, rate in employees_list:
     c.execute("SELECT id FROM employees WHERE name=?", (name,))
     if not c.fetchone():
         c.execute("INSERT INTO employees (name,daily_rate) VALUES (?,?)", (name, rate))
@@ -194,25 +143,13 @@ with tabs[0]:
             submit = st.form_submit_button("تأكيد الحجز")
 
             if submit and name and address and phone:
-                c.execute(
-                    "SELECT 1 FROM bookings WHERE name=? AND phone=? AND date=?",
-                    (name, phone, booking_date.strftime("%Y-%m-%d"))
-                )
+                c.execute("SELECT 1 FROM bookings WHERE name=? AND phone=? AND date=?", (name, phone, booking_date.strftime("%Y-%m-%d")))
                 if c.fetchone():
                     st.error("❌ لا يمكن الحجز مرتين في نفس اليوم")
                 else:
-                    c.execute("""
-                    INSERT INTO bookings (name,address,phone,date,feedback,time_slot)
-                    VALUES (?,?,?,?,?,?)
-                    """, (
-                        name, address, phone,
-                        booking_date.strftime("%Y-%m-%d"),
-                        feedback, time_slot
-                    ))
+                    c.execute("INSERT INTO bookings (name,address,phone,date,feedback,time_slot) VALUES (?,?,?,?,?,?)", (name, address, phone, booking_date.strftime("%Y-%m-%d"), feedback, time_slot))
                     conn.commit()
-
                     st.success("✅ تم تأكيد الحجز بنجاح")
-
     else:
         st.error("❌ انتهت فترة الحجز")
 
@@ -221,78 +158,75 @@ with tabs[1]:
     password = st.text_input("كلمة سر المسؤول", type="password")
     if password == ADMIN_PASSWORD:
         df = pd.read_sql("SELECT name,address,phone,date,time_slot,feedback FROM bookings", conn)
-        st.dataframe(df if not df.empty else pd.DataFrame())
+        st.dataframe(df if not df.empty else pd.DataFrame(), use_container_width=True)
 
 # ================= صفحة الموظفين =================
 with tabs[2]:
-    password = st.text_input("كلمة سر الموظفين", type="password")
+    password = st.text_input("كلمة سر الموظفين", type="password", key="emp_pass")
     if password == EMP_PASSWORD:
-        c.execute("SELECT id,name,daily_rate FROM employees")
+        st.markdown("### 📋 سجل رواتب الموظفين")
+        
+        c.execute("SELECT id, name, daily_rate FROM employees")
         emps = c.fetchall()
 
-        st.markdown("### 📋 تسجيل الحضور")
-        day = st.date_input("اليوم")
-
-        selected_emps = []
-        for emp_id, emp_name, _ in emps:
-            if st.checkbox(emp_name, key=f"a{emp_id}"):
-                selected_emps.append(emp_id)
-
-        if st.button("✅ تسجيل الحضور"):
-            for emp_id in selected_emps:
-                c.execute(
-                    "INSERT OR IGNORE INTO attendance (employee_id,date) VALUES (?,?)",
-                    (emp_id, day.strftime("%Y-%m-%d"))
-                )
-            conn.commit()
-            st.success("✅ تم تسجيل الحضور بنجاح")
-
+        # عرض الجدول الرئيسي للرواتب
         rows = []
         for emp_id, emp_name, rate in emps:
-            days = c.execute(
-                "SELECT COUNT(*) FROM attendance WHERE employee_id=?",
-                (emp_id,)
-            ).fetchone()[0]
-            deductions = c.execute(
-                "SELECT COALESCE(SUM(amount),0) FROM salary_deductions WHERE employee_id=?",
-                (emp_id,)
-            ).fetchone()[0]
-            salary = days * rate - deductions
-            rows.append([emp_name, days, deductions, salary])
+            days = c.execute("SELECT COUNT(*) FROM attendance WHERE employee_id=?", (emp_id,)).fetchone()[0]
+            deductions = c.execute("SELECT COALESCE(SUM(amount),0) FROM salary_deductions WHERE employee_id=?", (emp_id,)).fetchone()[0]
+            salary = (days * rate) - deductions
+            rows.append([emp_name, days, rate, deductions, salary])
 
-        st.dataframe(pd.DataFrame(
-            rows, columns=["الموظف", "أيام الحضور", "إجمالي الخصم", "المرتب النهائي"]
-        ))
+        df_salaries = pd.DataFrame(
+            rows, columns=["اسم الموظف", "أيام الحضور", "اليومية", "إجمالي الخصم", "المرتب المستحق"]
+        )
+        st.table(df_salaries)
+
+        st.markdown("---")
+        
+        # قسم إضافة خصم جديد
+        st.markdown("### 💸 إضافة خصم / سلفة")
+        with st.form("deduction_form"):
+            emp_to_deduct = st.selectbox("اختر الموظف", [e[1] for e in emps])
+            amount = st.number_input("المبلغ (جنيه)", min_value=0)
+            reason = st.text_input("السبب (سلفة، تأخير، الخ)")
+            submit_deduction = st.form_submit_button("إضافة الخصم")
+            
+            if submit_deduction and amount > 0:
+                # الحصول على ID الموظف من اسمه
+                e_id = next(e[0] for e in emps if e[1] == emp_to_deduct)
+                c.execute("INSERT INTO salary_deductions (employee_id, amount, reason, date) VALUES (?, ?, ?, ?)",
+                          (e_id, amount, reason, today.strftime("%Y-%m-%d")))
+                conn.commit()
+                st.success(f"✅ تم تسجيل خصم مبلغ {amount} للموظف {emp_to_deduct}")
+                st.rerun()
 
 # ================= صفحة أوردرات اليوم =================
 with tabs[3]:
-    password = st.text_input("كلمة سر الأوردرات", type="password")
+    password = st.text_input("كلمة سر الأوردرات", type="password", key="order_pass")
     if password == ORDERS_PASSWORD:
         with st.form("order_form"):
-            name = st.text_input("اسم الأوردر")
+            order_name = st.text_input("اسم الأوردر")
             price = st.number_input("السعر", min_value=0)
             add = st.form_submit_button("إضافة")
-            if add and name and price > 0:
-                c.execute(
-                    "INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)",
-                    (name, price, today.strftime("%Y-%m-%d"))
-                )
+            if add and order_name and price > 0:
+                c.execute("INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)", (order_name, price, today.strftime("%Y-%m-%d")))
                 conn.commit()
                 st.success("✅ تم إضافة الأوردر")
 
-        c.execute(
-            "SELECT id,order_name,price FROM daily_orders WHERE date=?",
-            (today.strftime("%Y-%m-%d"),)
-        )
+        c.execute("SELECT id, order_name, price FROM daily_orders WHERE date=?", (today.strftime("%Y-%m-%d"),))
+        orders = c.fetchall()
+        
         total = 0
-        for oid, n, p in c.fetchall():
+        for oid, n, p in orders:
             total += p
             col1, col2, col3 = st.columns([4,2,1])
             col1.markdown(f"**{n}**")
             col2.markdown(f"💰 {p} جنيه")
-            if col3.button("❌", key=oid):
+            if col3.button("❌", key=f"del_{oid}"):
                 c.execute("DELETE FROM daily_orders WHERE id=?", (oid,))
                 conn.commit()
-                st.experimental_rerun()
+                st.rerun()
 
+        st.markdown("---")
         st.markdown(f"## 💰 إجمالي اليوم: **{total} جنيه**")
