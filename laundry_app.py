@@ -27,14 +27,13 @@ footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- ستايل الموقع + رمضان ----------------
+# ---------------- ستايل الموقع ----------------
 st.markdown("""
 <style>
 .stApp {
     background: linear-gradient(135deg,#E3F2FD,#BBDEFB,#90CAF9,#64B5F6);
     font-family: 'Cairo', sans-serif;
 }
-
 div[data-testid="stForm"],
 div[data-testid="stVerticalBlock"] > div {
     background-color: rgba(255,255,255,0.88);
@@ -42,23 +41,7 @@ div[data-testid="stVerticalBlock"] > div {
     border-radius: 18px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.12);
 }
-
 h1, h2, h3 { color: #0D47A1; text-align: center; }
-
-.stButton > button {
-    background: linear-gradient(90deg,#1E88E5,#42A5F5);
-    color: white;
-    border-radius: 14px;
-    font-size: 16px;
-    padding: 10px 22px;
-    border: none;
-}
-
-input, textarea {
-    border-radius: 10px !important;
-    border: 1px solid #90CAF9 !important;
-}
-
 .ramadan-box {
     background: linear-gradient(135deg,#1A237E,#283593);
     color: white;
@@ -66,15 +49,6 @@ input, textarea {
     border-radius: 22px;
     text-align: center;
     margin-bottom: 30px;
-    box-shadow: 0 12px 35px rgba(0,0,0,0.3);
-}
-
-.phone-box {
-    background: rgba(255,255,255,0.15);
-    padding: 12px;
-    border-radius: 14px;
-    margin-top: 10px;
-    font-size: 18px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -96,12 +70,12 @@ c.execute("CREATE TABLE IF NOT EXISTS daily_orders (id INTEGER PRIMARY KEY AUTOI
 conn.commit()
 
 # ---------------- الموظفين ----------------
-employees_list = [
+employees_data = [
     ("مصطفى الفيشاوى", 100),
     ("وليد المالكي", 150),
     ("ابراهيم بكير", 150)
 ]
-for name, rate in employees_list:
+for name, rate in employees_data:
     c.execute("SELECT id FROM employees WHERE name=?", (name,))
     if not c.fetchone():
         c.execute("INSERT INTO employees (name,daily_rate) VALUES (?,?)", (name, rate))
@@ -112,9 +86,6 @@ st.markdown(f"""
 <div class="ramadan-box">
     <h1>🧼 مغسلة المتحدة للسجاد</h1>
     <h3>📍 العنوان: {CONTACT_ADDRESS}</h3>
-    <div class="phone-box">
-        📞 للتواصل والحجز: <b>{CONTACT_PHONE}</b>
-    </div>
     <h2>🌙 رمضان كريم 🌙</h2>
 </div>
 """, unsafe_allow_html=True)
@@ -123,53 +94,55 @@ tabs = st.tabs(["📝 الحجز", "🔐 المسؤول", "👷 الموظفين
 
 # ================= صفحة الحجز =================
 with tabs[0]:
-    now = datetime.now()
-    end_datetime = datetime.combine(last_booking_date, datetime.max.time())
-    remaining = end_datetime - now
-
-    if remaining.total_seconds() > 0:
-        d = remaining.days
-        h, r = divmod(remaining.seconds, 3600)
-        m, s = divmod(r, 60)
-        st.info(f"⏳ متبقي للحجز: {d} يوم {h} ساعة {m} دقيقة {s} ثانية")
-
-        with st.form("booking"):
-            name = st.text_input("الاسم")
-            address = st.text_input("العنوان")
-            phone = st.text_input("رقم الهاتف")
-            booking_date = st.date_input("التاريخ", max_value=last_booking_date)
-            time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
-            feedback = st.text_area("ملاحظات")
-            submit = st.form_submit_button("تأكيد الحجز")
-
-            if submit and name and address and phone:
-                c.execute("SELECT 1 FROM bookings WHERE name=? AND phone=? AND date=?", (name, phone, booking_date.strftime("%Y-%m-%d")))
-                if c.fetchone():
-                    st.error("❌ لا يمكن الحجز مرتين في نفس اليوم")
-                else:
-                    c.execute("INSERT INTO bookings (name,address,phone,date,feedback,time_slot) VALUES (?,?,?,?,?,?)", (name, address, phone, booking_date.strftime("%Y-%m-%d"), feedback, time_slot))
-                    conn.commit()
-                    st.success("✅ تم تأكيد الحجز بنجاح")
-    else:
-        st.error("❌ انتهت فترة الحجز")
+    with st.form("booking"):
+        name = st.text_input("الاسم")
+        address = st.text_input("العنوان")
+        phone = st.text_input("رقم الهاتف")
+        booking_date = st.date_input("التاريخ", max_value=last_booking_date)
+        time_slot = st.radio("الوقت", ["صباحًا", "مساءً"], horizontal=True)
+        submit = st.form_submit_button("تأكيد الحجز")
+        if submit and name and phone:
+            c.execute("INSERT INTO bookings (name,address,phone,date,time_slot) VALUES (?,?,?,?,?)", 
+                      (name, address, phone, booking_date.strftime("%Y-%m-%d"), time_slot))
+            conn.commit()
+            st.success("✅ تم تأكيد الحجز")
 
 # ================= صفحة المسؤول =================
 with tabs[1]:
     password = st.text_input("كلمة سر المسؤول", type="password")
     if password == ADMIN_PASSWORD:
-        df = pd.read_sql("SELECT name,address,phone,date,time_slot,feedback FROM bookings", conn)
-        st.dataframe(df if not df.empty else pd.DataFrame(), use_container_width=True)
+        df = pd.read_sql("SELECT name,address,phone,date,time_slot FROM bookings", conn)
+        st.dataframe(df, use_container_width=True)
 
 # ================= صفحة الموظفين =================
 with tabs[2]:
-    password = st.text_input("كلمة سر الموظفين", type="password", key="emp_pass")
+    password = st.text_input("كلمة سر الموظفين", type="password", key="emp_p")
     if password == EMP_PASSWORD:
-        st.markdown("### 📋 سجل رواتب الموظفين")
-        
         c.execute("SELECT id, name, daily_rate FROM employees")
         emps = c.fetchall()
 
-        # عرض الجدول الرئيسي للرواتب
+        # --- 1. قسم تسجيل الحضور (الذي طلبته) ---
+        st.markdown("### 📝 تسجيل حضور اليوم")
+        attendance_date = st.date_input("تاريخ الحضور", today)
+        selected_emps = []
+        for emp_id, emp_name, _ in emps:
+            if st.checkbox(emp_name, key=f"att_{emp_id}"):
+                selected_emps.append(emp_id)
+        
+        if st.button("✅ حفظ الحضور"):
+            for e_id in selected_emps:
+                # منع التكرار في نفس اليوم
+                c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (e_id, attendance_date.strftime("%Y-%m-%d")))
+                if not c.fetchone():
+                    c.execute("INSERT INTO attendance (employee_id, date) VALUES (?,?)", (e_id, attendance_date.strftime("%Y-%m-%d")))
+            conn.commit()
+            st.success("✅ تم تسجيل الحضور")
+            st.rerun()
+
+        st.markdown("---")
+
+        # --- 2. جدول الرواتب ---
+        st.markdown("### 📊 جدول الحسابات")
         rows = []
         for emp_id, emp_name, rate in emps:
             days = c.execute("SELECT COUNT(*) FROM attendance WHERE employee_id=?", (emp_id,)).fetchone()[0]
@@ -177,56 +150,39 @@ with tabs[2]:
             salary = (days * rate) - deductions
             rows.append([emp_name, days, rate, deductions, salary])
 
-        df_salaries = pd.DataFrame(
-            rows, columns=["اسم الموظف", "أيام الحضور", "اليومية", "إجمالي الخصم", "المرتب المستحق"]
-        )
+        df_salaries = pd.DataFrame(rows, columns=["اسم الموظف", "أيام الحضور", "اليومية", "إجمالي الخصم", "المرتب المستحق"])
         st.table(df_salaries)
 
+        # --- 3. زر التصفير (لتصفير الأرقام التي ذكرتها) ---
         st.markdown("---")
-        
-        # قسم إضافة خصم جديد
-        st.markdown("### 💸 إضافة خصم / سلفة")
-        with st.form("deduction_form"):
-            emp_to_deduct = st.selectbox("اختر الموظف", [e[1] for e in emps])
-            amount = st.number_input("المبلغ (جنيه)", min_value=0)
-            reason = st.text_input("السبب (سلفة، تأخير، الخ)")
-            submit_deduction = st.form_submit_button("إضافة الخصم")
-            
-            if submit_deduction and amount > 0:
-                # الحصول على ID الموظف من اسمه
-                e_id = next(e[0] for e in emps if e[1] == emp_to_deduct)
-                c.execute("INSERT INTO salary_deductions (employee_id, amount, reason, date) VALUES (?, ?, ?, ?)",
-                          (e_id, amount, reason, today.strftime("%Y-%m-%d")))
-                conn.commit()
-                st.success(f"✅ تم تسجيل خصم مبلغ {amount} للموظف {emp_to_deduct}")
-                st.rerun()
+        if st.button("⚠️ تصفير كافة الحسابات (ابدأ من الصفر)"):
+            c.execute("DELETE FROM attendance")
+            c.execute("DELETE FROM salary_deductions")
+            conn.commit()
+            st.warning("تم تصفير جميع أيام الحضور والخصومات بنجاح.")
+            st.rerun()
 
 # ================= صفحة أوردرات اليوم =================
 with tabs[3]:
-    password = st.text_input("كلمة سر الأوردرات", type="password", key="order_pass")
+    password = st.text_input("كلمة سر الأوردرات", type="password", key="ord_p")
     if password == ORDERS_PASSWORD:
         with st.form("order_form"):
-            order_name = st.text_input("اسم الأوردر")
-            price = st.number_input("السعر", min_value=0)
-            add = st.form_submit_button("إضافة")
-            if add and order_name and price > 0:
-                c.execute("INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)", (order_name, price, today.strftime("%Y-%m-%d")))
+            oname = st.text_input("اسم الأوردر")
+            oprice = st.number_input("السعر", min_value=0)
+            if st.form_submit_button("إضافة"):
+                c.execute("INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)", (oname, oprice, today.strftime("%Y-%m-%d")))
                 conn.commit()
-                st.success("✅ تم إضافة الأوردر")
-
-        c.execute("SELECT id, order_name, price FROM daily_orders WHERE date=?", (today.strftime("%Y-%m-%d"),))
-        orders = c.fetchall()
+                st.rerun()
         
-        total = 0
-        for oid, n, p in orders:
-            total += p
-            col1, col2, col3 = st.columns([4,2,1])
-            col1.markdown(f"**{n}**")
-            col2.markdown(f"💰 {p} جنيه")
-            if col3.button("❌", key=f"del_{oid}"):
+        c.execute("SELECT id, order_name, price FROM daily_orders WHERE date=?", (today.strftime("%Y-%m-%d"),))
+        res = c.fetchall()
+        total = sum(i[2] for i in res)
+        for oid, n, p in res:
+            col_a, col_b, col_c = st.columns([4,2,1])
+            col_a.text(n)
+            col_b.text(f"{p} جنيه")
+            if col_c.button("❌", key=f"del_{oid}"):
                 c.execute("DELETE FROM daily_orders WHERE id=?", (oid,))
                 conn.commit()
                 st.rerun()
-
-        st.markdown("---")
-        st.markdown(f"## 💰 إجمالي اليوم: **{total} جنيه**")
+        st.markdown(f"### 💰 إجمالي اليوم: {total} جنيه")
