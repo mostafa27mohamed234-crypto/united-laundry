@@ -167,7 +167,6 @@ st.markdown(f"""
         📞 للتواصل والحجز: <b>{CONTACT_PHONE}</b>
     </div>
     <h2>🌙 رمضان كريم 🌙</h2>
-    <p style="margin-top:10px;">🕌 ✨ 🏮 ✨ 🕌</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -212,23 +211,8 @@ with tabs[0]:
                     ))
                     conn.commit()
 
-                    # ---------------- عرض رسالة الشكر بدون rerun ----------------
-                    st.markdown(f"""
-                    <div class="success-card">
-                        <h1>✅ تم تأكيد الحجز بنجاح</h1>
-                        <h3>شكرًا لاختياركم مغسلة المتحدة للسجاد 🌸</h3>
-                        <hr>
-                        <p><b>👤 الاسم:</b> {name}</p>
-                        <p><b>📍 العنوان:</b> {address}</p>
-                        <p><b>📞 الهاتف:</b> {phone}</p>
-                        <p><b>📅 التاريخ:</b> {booking_date.strftime("%Y-%m-%d")}</p>
-                        <p><b>⏰ الوقت:</b> {time_slot}</p>
-                        <p><b>📝 ملاحظات:</b> {feedback or "—"}</p>
-                        <br>
-                        <p>📞 للاستفسار: {CONTACT_PHONE}</p>
-                        <p>🌙 كل عام وأنتم بخير</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.success("✅ تم تأكيد الحجز بنجاح")
+
     else:
         st.error("❌ انتهت فترة الحجز")
 
@@ -236,12 +220,8 @@ with tabs[0]:
 with tabs[1]:
     password = st.text_input("كلمة سر المسؤول", type="password")
     if password == ADMIN_PASSWORD:
-        st.markdown("### 📋 الحجوزات المسجلة")
         df = pd.read_sql("SELECT name,address,phone,date,time_slot,feedback FROM bookings", conn)
-        if not df.empty:
-            st.dataframe(df)
-        else:
-            st.info("لا توجد حجوزات بعد")
+        st.dataframe(df if not df.empty else pd.DataFrame())
 
 # ================= صفحة الموظفين =================
 with tabs[2]:
@@ -250,30 +230,22 @@ with tabs[2]:
         c.execute("SELECT id,name,daily_rate FROM employees")
         emps = c.fetchall()
 
-        st.markdown("### تسجيل الحضور")
+        st.markdown("### 📋 تسجيل الحضور")
         day = st.date_input("اليوم")
 
+        selected_emps = []
         for emp_id, emp_name, _ in emps:
             if st.checkbox(emp_name, key=f"a{emp_id}"):
+                selected_emps.append(emp_id)
+
+        if st.button("✅ تسجيل الحضور"):
+            for emp_id in selected_emps:
                 c.execute(
                     "INSERT OR IGNORE INTO attendance (employee_id,date) VALUES (?,?)",
                     (emp_id, day.strftime("%Y-%m-%d"))
                 )
-        conn.commit()
-
-        st.markdown("### خصم من المرتب")
-        emp_map = {name: emp_id for emp_id, name, _ in emps}
-        emp = st.selectbox("الموظف", emp_map.keys())
-        amount = st.number_input("قيمة الخصم", min_value=0)
-        reason = st.text_input("سبب الخصم")
-
-        if st.button("تنفيذ الخصم"):
-            c.execute("""
-            INSERT INTO salary_deductions (employee_id,amount,reason,date)
-            VALUES (?,?,?,?)
-            """, (emp_map[emp], amount, reason, today.strftime("%Y-%m-%d")))
             conn.commit()
-            st.success("✅ تم الخصم")
+            st.success("✅ تم تسجيل الحضور بنجاح")
 
         rows = []
         for emp_id, emp_name, rate in emps:
@@ -297,16 +269,21 @@ with tabs[3]:
     password = st.text_input("كلمة سر الأوردرات", type="password")
     if password == ORDERS_PASSWORD:
         with st.form("order_form"):
-            name = st.text_input("اسم الأوردر", key="order_name", placeholder="")
+            name = st.text_input("اسم الأوردر")
             price = st.number_input("السعر", min_value=0)
             add = st.form_submit_button("إضافة")
             if add and name and price > 0:
-                c.execute("INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)",
-                          (name, price, today.strftime("%Y-%m-%d")))
+                c.execute(
+                    "INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)",
+                    (name, price, today.strftime("%Y-%m-%d"))
+                )
                 conn.commit()
                 st.success("✅ تم إضافة الأوردر")
 
-        c.execute("SELECT id,order_name,price FROM daily_orders WHERE date=?", (today.strftime("%Y-%m-%d"),))
+        c.execute(
+            "SELECT id,order_name,price FROM daily_orders WHERE date=?",
+            (today.strftime("%Y-%m-%d"),)
+        )
         total = 0
         for oid, n, p in c.fetchall():
             total += p
@@ -317,4 +294,5 @@ with tabs[3]:
                 c.execute("DELETE FROM daily_orders WHERE id=?", (oid,))
                 conn.commit()
                 st.experimental_rerun()
+
         st.markdown(f"## 💰 إجمالي اليوم: **{total} جنيه**")
