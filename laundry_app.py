@@ -6,13 +6,12 @@ import pandas as pd
 # ---------------- إعداد الصفحة ----------------
 st.set_page_config(
     page_title="المتحدة - رمضان كريم",
+    page_icon="🌙",
     layout="wide"
 )
 
 # ---------------- توحيد كلمات السر ----------------
-# تم تعديل كل كلمات السر لتصبح "المتحده@1996" بناءً على طلبك
 SHARED_PASSWORD = "المتحده@1996"
-
 CONTACT_PHONE = "01063316053"
 CONTACT_ADDRESS = "الشؤون الاجتماعية"
 
@@ -89,6 +88,17 @@ div[data-testid="stFormSubmitButton"] button:hover {{
     font-weight: bold;
     border-top: 1px solid rgba(255, 215, 0, 0.1);
 }}
+
+/* ستايل عداد الأيام المطور */
+.countdown-container {{
+    background: linear-gradient(90deg, #1e2d50 0%, #080c16 100%); 
+    padding: 20px; 
+    border-radius: 15px; 
+    border: 2px solid #39FF14; 
+    text-align: center; 
+    margin-bottom: 25px; 
+    box-shadow: 0 0 15px rgba(57, 255, 20, 0.3);
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -111,31 +121,57 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# ---------------- عداد الأيام المتبقية (إضافة احترافية) ----------------
+target_date = dt_date(2026, 3, 10)
+days_left = (target_date - dt_date.today()).days
+
+if days_left >= 0:
+    st.markdown(f"""
+    <div class="countdown-container">
+        <h3 style="margin:0; color:#39FF14 !important;">⏳ متبقي على غلق باب الحجوزات</h3>
+        <h1 style="margin:0; font-size: 55px; color:#FFFFFF !important;">{days_left} يوم</h1>
+        <p style="margin:0; color:#FFD700 !important;">آخر موعد متاح للحجز هو 10 مارس 2026</p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown(f"""
+    <div style="background: rgba(255, 0, 0, 0.2); padding: 20px; border-radius: 15px; 
+                border: 2px solid #FF0000; text-align: center; margin-bottom: 25px;">
+        <h2 style="margin:0; color:#FF0000 !important;">🚫 نعتذر، تم غلق باب الحجوزات</h2>
+        <p style="margin:0; color:#FFFFFF !important;">انتهت الفترة المحددة بتاريخ 10 مارس 2026</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ---------------- التبويبات ----------------
 tabs = st.tabs(["📝 تسجيل الحجوزات", "👷 الموظفين", "💰 الإيرادات", "🔐 الإدارة"])
 footer_html = f"""<div class="footer-signature">🚀 تطوير: البشمهندس مصطفى الفيشاوي 🚀</div>"""
 
-# 1. تسجيل الحجوزات
+# 1. تسجيل الحجوزات (مع شرط غلق الحجز)
 with tabs[0]:
-    with st.form("booking_form", clear_on_submit=True):
-        st.markdown("<h3 style='color:#FFD700;'>إضافة بيانات الطلب</h3>", unsafe_allow_html=True)
-        c1, c2, c3 = st.columns(3)
-        name = c1.text_input("اسم العميل")
-        phone = c2.text_input("رقم الموبايل")
-        addr = c3.text_input("العنوان / التفاصيل")
-        
-        c4, c5 = st.columns([2, 1])
-        b_date = c4.date_input("تاريخ الحجز", dt_date.today())
-        time_slot = c5.radio("وقت الحضور", ["صباحًا", "مساءً"], horizontal=True)
-        
-        submit = st.form_submit_button("تأكيد وحفظ الأوردر الآن ✅")
-        
-        if submit:
-            if name and phone:
-                c.execute("INSERT INTO bookings (name,address,phone,date,time_slot) VALUES (?,?,?,?,?)", 
-                          (name, addr, phone, b_date.strftime("%Y-%m-%d"), time_slot))
-                conn.commit()
-                st.success("🎉 تم تسجيل الأوردر بنجاح!")
-            else: st.error("من فضلك اكتب الاسم والموبايل")
+    if dt_date.today() <= target_date:
+        with st.form("booking_form", clear_on_submit=True):
+            st.markdown("<h3 style='color:#FFD700;'>إضافة بيانات الطلب</h3>", unsafe_allow_html=True)
+            c1, c2, c3 = st.columns(3)
+            name = c1.text_input("اسم العميل")
+            phone = c2.text_input("رقم الموبايل")
+            addr = c3.text_input("العنوان / التفاصيل")
+            
+            c4, c5 = st.columns([2, 1])
+            # جعل أقصى تاريخ ممكن اختياره هو 10 مارس
+            b_date = c4.date_input("تاريخ الحجز", dt_date.today(), max_value=target_date)
+            time_slot = c5.radio("وقت الحضور", ["صباحًا", "مساءً"], horizontal=True)
+            
+            submit = st.form_submit_button("تأكيد وحفظ الأوردر الآن ✅")
+            
+            if submit:
+                if name and phone:
+                    c.execute("INSERT INTO bookings (name,address,phone,date,time_slot) VALUES (?,?,?,?,?)", 
+                              (name, addr, phone, b_date.strftime("%Y-%m-%d"), time_slot))
+                    conn.commit()
+                    st.success("🎉 تم تسجيل الأوردر بنجاح!")
+                else: st.error("من فضلك اكتب الاسم والموبايل")
+    else:
+        st.error("⚠️ عفواً! انتهت الفترة المتاحة للحجز (آخر موعد كان 10 مارس 2026).")
     st.markdown(footer_html, unsafe_allow_html=True)
 
 # 2. الموظفين
@@ -145,24 +181,28 @@ with tabs[1]:
         c.execute("SELECT id, name, daily_rate FROM employees")
         emps = c.fetchall()
         st.write("📊 **دفتر الحضور**")
-        cols = st.columns(len(emps))
-        for i, (eid, ename, rate) in enumerate(emps):
-            if cols[i].checkbox(f"{ename}", key=f"at_{eid}"):
-                c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (eid, dt_date.today().strftime("%Y-%m-%d")))
-                if not c.fetchone():
-                    c.execute("INSERT INTO attendance (employee_id, date) VALUES (?,?)", (eid, dt_date.today().strftime("%Y-%m-%d")))
-        if st.button("حفظ الحضور اليومي"): conn.commit(); st.success("تم الحفظ")
+        if emps:
+            cols = st.columns(len(emps))
+            for i, (eid, ename, rate) in enumerate(emps):
+                if cols[i].checkbox(f"{ename}", key=f"at_{eid}"):
+                    c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (eid, dt_date.today().strftime("%Y-%m-%d")))
+                    if not c.fetchone():
+                        c.execute("INSERT INTO attendance (employee_id, date) VALUES (?,?)", (eid, dt_date.today().strftime("%Y-%m-%d")))
+            if st.button("حفظ الحضور اليومي"): conn.commit(); st.success("تم الحفظ")
+        else:
+            st.info("لا يوجد موظفين مسجلين")
 
         st.markdown("---")
         c1, c2 = st.columns(2)
         with c1:
             st.write("💸 **سلفيات**")
-            target = st.selectbox("الموظف", [e[1] for e in emps])
-            amt = st.number_input("المبلغ", min_value=0)
-            if st.button("خصم المبلغ"):
-                eid = next(e[0] for e in emps if e[1] == target)
-                c.execute("INSERT INTO salary_deductions (employee_id, amount, date) VALUES (?,?,?)", (eid, amt, dt_date.today().strftime("%Y-%m-%d")))
-                conn.commit(); st.rerun()
+            if emps:
+                target = st.selectbox("الموظف", [e[1] for e in emps])
+                amt = st.number_input("المبلغ", min_value=0)
+                if st.button("خصم المبلغ"):
+                    eid = next(e[0] for e in emps if e[1] == target)
+                    c.execute("INSERT INTO salary_deductions (employee_id, amount, date) VALUES (?,?,?)", (eid, amt, dt_date.today().strftime("%Y-%m-%d")))
+                    conn.commit(); st.rerun()
         with c2:
             st.write("🧾 **الحسابات**")
             res = []
@@ -200,7 +240,6 @@ with tabs[3]:
         
         st.markdown("---")
         st.subheader("🗑️ إدارة المسح")
-        
         col_del1, col_del2 = st.columns(2)
         
         with col_del1:
@@ -226,5 +265,4 @@ with tabs[3]:
                 conn.commit()
                 st.warning("تم مسح السجل بالكامل!")
                 st.rerun()
-                
     st.markdown(footer_html, unsafe_allow_html=True)
