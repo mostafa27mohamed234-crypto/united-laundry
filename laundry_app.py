@@ -5,17 +5,18 @@ import pandas as pd
 
 # ---------------- إعداد الصفحة ----------------
 st.set_page_config(
-    page_title="🧼 مغسلة المتحدة - نسخة رمضان",
+    page_title="🧼 مغسلة المتحدة - Ramadan Edition",
     layout="wide"
 )
 
-# ---------------- كلمات السر + بيانات الهيدر ----------------
+# ---------------- كلمات السر + البيانات ----------------
 ADMIN_PASSWORD = "المتحده@1996"
 EMP_PASSWORD = "mostafa23"
 ORDERS_PASSWORD = "اكرم1996"
+CONTACT_PHONE = "01063316053"
 CONTACT_ADDRESS = "الشؤون الاجتماعية"
 
-# ---------------- إخفاء واجهة Streamlit الافتراضية ----------------
+# ---------------- إخفاء واجهة Streamlit ----------------
 st.markdown("""
 <style>
 #MainMenu {visibility: hidden;}
@@ -25,97 +26,98 @@ footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- ستايل رمضان الخرافي ----------------
-st.markdown("""
+# ---------------- الستايل الرمضاني الخرافي ----------------
+st.markdown(f"""
 <style>
-/* خلفية ليلية رمضانية متحركة */
-.stApp {
-    background: linear-gradient(to bottom, #050510 0%, #101030 50%, #1a1a40 100%);
-    background-attachment: fixed;
-    color: #f0f0f0;
-}
+/* خلفية الفضاء الرمضاني المتحرك */
+.stApp {{
+    background: linear-gradient(-45deg, #050510, #101030, #1a1a40, #000000);
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+    color: #ffffff;
+}}
 
-/* إضافة نجوم في الخلفية */
-.stApp::before {
-    content: " ";
+@keyframes gradient {{
+    0% {{ background-position: 0% 50%; }}
+    50% {{ background-position: 100% 50%; }}
+    100% {{ background-position: 0% 50%; }}
+}}
+
+/* تأثير النجوم المتلألئة */
+.stApp::before {{
+    content: "";
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     background: url('https://www.transparenttextures.com/patterns/stardust.png');
-    opacity: 0.3;
-}
+    opacity: 0.4;
+    pointer-events: none;
+}}
 
-/* تصميم البطاقات الزجاجي (Glassmorphism) */
+/* كروت شفافة (Glassmorphism) */
 div[data-testid="stForm"], 
-div[data-testid="stVerticalBlock"] > div {
-    background: rgba(255, 255, 255, 0.07) !important;
+div[data-testid="stVerticalBlock"] > div {{
+    background: rgba(255, 255, 255, 0.05) !important;
     backdrop-filter: blur(15px);
     border-radius: 25px !important;
-    border: 1px solid rgba(255, 215, 0, 0.2);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
-    padding: 25px !important;
-}
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    padding: 30px !important;
+    margin-bottom: 20px !important;
+}}
 
-/* عناوين رمضانية ذهبية */
-h1, h2, h3 { 
-    color: #FFD700 !important; 
-    text-align: center; 
-    text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-    font-family: 'Cairo', sans-serif;
-}
-
-/* هيدر رمضان */
-.ramadan-header {
-    background: rgba(0, 0, 0, 0.4);
-    border: 2px solid #FFD700;
-    padding: 30px;
-    border-radius: 30px;
+/* الهيدر العلوي المطور */
+.header-container {{
     text-align: center;
+    padding: 40px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 30px;
+    border-bottom: 3px solid #FFD700;
     margin-bottom: 40px;
-    box-shadow: 0 0 25px rgba(255, 215, 0, 0.2);
-}
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+}}
 
-/* ستايل الأزرار */
-.stButton > button {
-    background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%) !important;
-    color: #050510 !important;
-    font-weight: bold !important;
+.phone-badge {{
+    display: inline-block;
+    background: linear-gradient(90deg, #FFD700, #FFA500);
+    color: #000 !important;
+    padding: 10px 25px;
+    border-radius: 50px;
+    font-weight: bold;
+    font-size: 20px;
+    margin-top: 15px;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}}
+
+/* ستايل الأزرار النيون */
+.stButton > button {{
+    background: transparent !important;
+    color: #FFD700 !important;
+    border: 2px solid #FFD700 !important;
     border-radius: 15px !important;
-    border: none !important;
-    transition: 0.3s !important;
-}
-.stButton > button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 20px #FFD700;
-}
+    font-weight: bold !important;
+    padding: 10px 30px !important;
+    transition: all 0.4s ease-in-out !important;
+}}
+
+.stButton > button:hover {{
+    background: #FFD700 !important;
+    color: #000 !important;
+    box-shadow: 0 0 25px #FFD700;
+    transform: translateY(-3px);
+}}
 
 /* الجداول */
-.stTable {
-    background: rgba(0, 0, 0, 0.2) !important;
-    border-radius: 15px;
-}
-
-/* التبويبات */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 10px;
-    background-color: transparent;
-}
-.stTabs [data-baseweb="tab"] {
-    background-color: rgba(255, 215, 0, 0.1);
-    border-radius: 10px 10px 0 0;
-    color: #FFD700;
-}
+.stTable {{
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-radius: 20px;
+}}
 </style>
 """, unsafe_allow_html=True)
-
-# ---------------- اليوم ----------------
-today = dt_date.today()
-last_booking_date = dt_date(2026, 3, 10)
 
 # ---------------- قاعدة البيانات ----------------
 conn = sqlite3.connect("bookings.db", check_same_thread=False)
 c = conn.cursor()
-
-c.execute("CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, address TEXT, phone TEXT, date TEXT, feedback TEXT, time_slot TEXT)")
+c.execute("CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, address TEXT, phone TEXT, date TEXT, time_slot TEXT)")
 c.execute("CREATE TABLE IF NOT EXISTS employees (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, daily_rate INTEGER)")
 c.execute("CREATE TABLE IF NOT EXISTS attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, employee_id INTEGER, date TEXT)")
 c.execute("CREATE TABLE IF NOT EXISTS salary_deductions (id INTEGER PRIMARY KEY AUTOINCREMENT, employee_id INTEGER, amount INTEGER, reason TEXT, date TEXT)")
@@ -130,119 +132,92 @@ for name, rate in employees_data:
         c.execute("INSERT INTO employees (name,daily_rate) VALUES (?,?)", (name, rate))
 conn.commit()
 
-# ---------------- هيدر رمضان ----------------
+# ---------------- الهيدر الاحترافي الجديد ----------------
 st.markdown(f"""
-<div class="ramadan-header">
-    <h1>🌙 مغسلة المتحدة للسجاد 🌙</h1>
-    <h3 style="color: #f0f0f0 !important;">📍 {CONTACT_ADDRESS}</h3>
-    <h2 style="letter-spacing: 2px;">رمضان كريم</h2>
-    <p style="color: #FFD700;">وكل عام وأنتم بخير بمناسبة الشهر الفضيل</p>
+<div class="header-container">
+    <h1 style="font-size: 55px; margin-bottom: 10px;">✨ مغسلة المتحدة ✨</h1>
+    <h3 style="color: #f0f0f0;">📍 العنوان: {CONTACT_ADDRESS}</h3>
+    <div class="phone-badge">📞 للتواصل والحجز: {CONTACT_PHONE}</div>
+    <h2 style="margin-top: 25px; color: #FFD700; font-family: 'Cairo';">🌙 رمضان كريم وكل عام وأنتم بخير 🌙</h2>
 </div>
 """, unsafe_allow_html=True)
 
-tabs = st.tabs(["✨ الحجز", "🔐 المسؤول", "👷 الموظفين", "📦 أوردرات اليوم"])
+# ---------------- التبويبات ----------------
+tabs = st.tabs(["📋 حجز أوردر", "👷 الموظفين", "📦 أوردرات اليوم", "🔐 الإدارة"])
 
-# ================= صفحة الحجز =================
+# 1. الحجز
 with tabs[0]:
-    with st.form("booking"):
-        name = st.text_input("اسم العميل")
-        address = st.text_input("العنوان بالتفصيل")
-        phone = st.text_input("رقم التليفون")
-        booking_date = st.date_input("تاريخ الحجز", max_value=last_booking_date)
-        time_slot = st.radio("موعد العمل", ["صباحًا", "مساءً"], horizontal=True)
-        submit = st.form_submit_button("تأكيد حجز الأوردر 🌙")
-        if submit and name and phone:
-            c.execute("INSERT INTO bookings (name,address,phone,date,time_slot) VALUES (?,?,?,?,?)", 
-                      (name, address, phone, booking_date.strftime("%Y-%m-%d"), time_slot))
-            conn.commit()
-            st.success("✨ تم تسجيل الحجز بنجاح.. رمضان مبارك!")
+    with st.form("booking_form"):
+        st.markdown("### 📝 بيانات الحجز الجديد")
+        c1, c2 = st.columns(2)
+        name = c1.text_input("اسم العميل")
+        phone = c2.text_input("رقم الهاتف")
+        addr = st.text_input("العنوان")
+        b_date = st.date_input("تاريخ اليوم")
+        slot = st.radio("موعد العمل", ["صباحًا", "مساءً"], horizontal=True)
+        if st.form_submit_button("تأكيد الحجز 🌙"):
+            if name and phone:
+                c.execute("INSERT INTO bookings (name,address,phone,date,time_slot) VALUES (?,?,?,?,?)", (name, addr, phone, b_date.strftime("%Y-%m-%d"), slot))
+                conn.commit()
+                st.success("تم الحجز بنجاح يا بطل! رمضان مبارك")
 
-# ================= صفحة المسؤول =================
+# 2. الموظفين
 with tabs[1]:
-    password = st.text_input("كلمة سر الإدارة", type="password", key="admin_pwd")
-    if password == ADMIN_PASSWORD:
-        st.markdown("### 📋 كشف الحجوزات")
-        df = pd.read_sql("SELECT name as 'الاسم', address as 'العنوان', phone as 'التليفون', date as 'التاريخ', time_slot as 'الفترة' FROM bookings", conn)
-        st.dataframe(df, use_container_width=True)
-
-# ================= صفحة الموظفين =================
-with tabs[2]:
-    password = st.text_input("كلمة سر شؤون الموظفين", type="password", key="emp_pwd")
-    if password == EMP_PASSWORD:
+    if st.text_input("كلمة سر الموظفين", type="password", key="emp_p") == EMP_PASSWORD:
         c.execute("SELECT id, name, daily_rate FROM employees")
         emps = c.fetchall()
-
-        st.markdown("### 📝 تحضير الموظفين")
-        att_date = st.date_input("تاريخ اليوم", today)
-        col_att1, col_att2 = st.columns([2, 1])
-        with col_att1:
-            selected_ids = []
-            for eid, ename, _ in emps:
-                if st.checkbox(f"حضر: {ename}", key=f"check_{eid}"):
-                    selected_ids.append(eid)
-        with col_att2:
-            if st.button("حفظ حضور اليوم ✨"):
-                for e_id in selected_ids:
-                    c.execute("SELECT 1 FROM attendance WHERE employee_id=? AND date=?", (e_id, att_date.strftime("%Y-%m-%d")))
-                    if not c.fetchone():
-                        c.execute("INSERT INTO attendance (employee_id, date) VALUES (?,?)", (e_id, att_date.strftime("%Y-%m-%d")))
-                conn.commit()
-                st.success("تم الحفظ بنجاح")
-                st.rerun()
-
-        st.markdown("---")
-        st.markdown("### 💸 تسجيل الخصومات / السلف")
-        with st.form("deduction_form"):
-            col_d1, col_d2, col_d3 = st.columns(3)
-            with col_d1: target_emp = st.selectbox("الموظف", [e[1] for e in emps])
-            with col_d2: deduct_amt = st.number_input("المبلغ", min_value=0)
-            with col_d3: deduct_reason = st.text_input("السبب")
-            if st.form_submit_button("إضافة الخصم"):
-                if deduct_amt > 0:
-                    emp_id_to_deduct = next(e[0] for e in emps if e[1] == target_emp)
-                    c.execute("INSERT INTO salary_deductions (employee_id, amount, reason, date) VALUES (?,?,?,?)",
-                              (emp_id_to_deduct, deduct_amt, deduct_reason, today.strftime("%Y-%m-%d")))
-                    conn.commit()
-                    st.rerun()
-
-        st.markdown("---")
-        st.markdown("### 📊 كشف حساب الرواتب")
-        rows = []
-        for emp_id, emp_name, rate in emps:
-            days = c.execute("SELECT COUNT(*) FROM attendance WHERE employee_id=?", (emp_id,)).fetchone()[0]
-            total_deduct = c.execute("SELECT COALESCE(SUM(amount),0) FROM salary_deductions WHERE employee_id=?", (emp_id,)).fetchone()[0]
-            final_salary = (days * rate) - total_deduct
-            rows.append([emp_name, days, rate, total_deduct, final_salary])
-        st.table(pd.DataFrame(rows, columns=["الموظف", "أيام الحضور", "اليومية", "الخصم", "المرتب المستحق"]))
-
-        if st.button("🗑️ تصفية السجلات (شهر جديد)"):
-            c.execute("DELETE FROM attendance"); c.execute("DELETE FROM salary_deductions"); conn.commit()
-            st.warning("تم تصفير الحسابات")
-            st.rerun()
-
-# ================= صفحة أوردرات اليوم =================
-with tabs[3]:
-    password = st.text_input("كلمة سر الأوردرات", type="password", key="ord_pwd")
-    if password == ORDERS_PASSWORD:
-        with st.form("order_form"):
-            order_name = st.text_input("نوع الأوردر")
-            price = st.number_input("المبلغ", min_value=0)
-            if st.form_submit_button("إضافة"):
-                c.execute("INSERT INTO daily_orders (order_name,price,date) VALUES (?,?,?)", (order_name, price, today.strftime("%Y-%m-%d")))
-                conn.commit()
-                st.rerun()
-
-        st.markdown("---")
-        c.execute("SELECT id, order_name, price FROM daily_orders WHERE date=?", (today.strftime("%Y-%m-%d"),))
-        day_orders = c.fetchall()
-        total_day = sum(o[2] for o in day_orders)
         
-        for oid, n, p in day_orders:
+        st.markdown("### ✅ تسجيل حضور الموظفين")
+        selected_ids = []
+        cols = st.columns(3)
+        for i, (eid, ename, rate) in enumerate(emps):
+            if cols[i % 3].checkbox(ename, key=f"att_{eid}"):
+                selected_ids.append(eid)
+        
+        if st.button("حفظ الحضور"):
+            for eid in selected_ids:
+                c.execute("INSERT INTO attendance (employee_id, date) VALUES (?,?)", (eid, dt_date.today().strftime("%Y-%m-%d")))
+            conn.commit(); st.success("تم الحفظ"); st.rerun()
+
+        st.divider()
+        st.markdown("### 📊 جدول الرواتب والخصومات")
+        rows = []
+        for eid, ename, rate in emps:
+            days = c.execute("SELECT COUNT(*) FROM attendance WHERE employee_id=?", (eid,)).fetchone()[0]
+            deducts = c.execute("SELECT COALESCE(SUM(amount),0) FROM salary_deductions WHERE employee_id=?", (eid,)).fetchone()[0]
+            rows.append([ename, days, rate, deducts, (days*rate)-deducts])
+        st.table(pd.DataFrame(rows, columns=["الاسم", "الحضور", "اليومية", "الخصومات", "الصافي"]))
+        
+        with st.expander("💸 إضافة خصم جديد"):
+            target = st.selectbox("الموظف", [e[1] for e in emps])
+            amt = st.number_input("المبلغ", min_value=0)
+            if st.button("تأكيد الخصم"):
+                eid = next(e[0] for e in emps if e[1] == target)
+                c.execute("INSERT INTO salary_deductions (employee_id, amount, date) VALUES (?,?,?)", (eid, amt, dt_date.today().strftime("%Y-%m-%d")))
+                conn.commit(); st.rerun()
+
+# 3. أوردرات اليوم
+with tabs[2]:
+    if st.text_input("كلمة سر الأوردرات", type="password", key="ord_p") == ORDERS_PASSWORD:
+        with st.form("orders"):
+            item = st.text_input("نوع الأوردر")
+            price = st.number_input("السعر", min_value=0)
+            if st.form_submit_button("إضافة"):
+                c.execute("INSERT INTO daily_orders (order_name, price, date) VALUES (?,?,?)", (item, price, dt_date.today().strftime("%Y-%m-%d")))
+                conn.commit(); st.rerun()
+        
+        res = c.execute("SELECT id, order_name, price FROM daily_orders WHERE date=?", (dt_date.today().strftime("%Y-%m-%d"),)).fetchall()
+        total = sum(r[2] for r in res)
+        for rid, n, p in res:
             col1, col2, col3 = st.columns([4,2,1])
-            col1.write(f"🏷️ {n}")
-            col2.write(f"💰 {p} جنيه")
-            if col3.button("❌", key=f"del_{oid}"):
-                c.execute("DELETE FROM daily_orders WHERE id=?", (oid,))
-                conn.commit()
-                st.rerun()
-        st.markdown(f"## 💰 إجمالي دخل اليوم: `{total_day}` جنيه")
+            col1.write(n); col2.write(f"{p} ج")
+            if col3.button("❌", key=f"del_{rid}"):
+                c.execute("DELETE FROM daily_orders WHERE id=?", (rid,)); conn.commit(); st.rerun()
+        st.markdown(f"## 💰 الإجمالي: `{total}` جنيه")
+
+# 4. الإدارة
+with tabs[3]:
+    if st.text_input("كلمة سر الإدارة", type="password", key="adm_p") == ADMIN_PASSWORD:
+        st.dataframe(pd.read_sql("SELECT * FROM bookings", conn), use_container_width=True)
+        if st.button("⚠️ تصفير حسابات الموظفين"):
+            c.execute("DELETE FROM attendance"); c.execute("DELETE FROM salary_deductions"); conn.commit(); st.rerun()
