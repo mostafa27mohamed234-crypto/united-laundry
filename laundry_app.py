@@ -9,10 +9,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- كلمات السر + البيانات ----------------
-ADMIN_PASSWORD = "المتحده@1996"
-EMP_PASSWORD = "mostafa23"
-ORDERS_PASSWORD = "اكرم1996"
+# ---------------- توحيد كلمات السر ----------------
+# تم تعديل كل كلمات السر لتصبح "المتحده@1996" بناءً على طلبك
+SHARED_PASSWORD = "المتحده@1996"
+
 CONTACT_PHONE = "01063316053"
 CONTACT_ADDRESS = "الشؤون الاجتماعية"
 
@@ -26,7 +26,7 @@ footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- الستايل المطور (تركيز على زرار الحجز) ----------------
+# ---------------- الستايل المطور ----------------
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap');
@@ -37,20 +37,17 @@ st.markdown(f"""
     font-family: 'Cairo', sans-serif;
 }}
 
-/* الأسماء والعناوين بيضاء وواضحة */
 h1, h2, h3, label, p {{
     color: #FFFFFF !important;
     font-weight: 800 !important;
 }}
 
-/* حقول الإدخال */
 .stTextInput input, .stNumberInput input, .stDateInput input, .stSelectbox div[data-baseweb="select"] {{
     background-color: rgba(30, 45, 80, 0.9) !important;
     color: #FFFFFF !important;
     border: 1px solid #FFD700 !important;
 }}
 
-/* الكروت */
 div[data-testid="stForm"], 
 div[data-testid="stVerticalBlock"] > div {{
     background: rgba(255, 255, 255, 0.1) !important;
@@ -59,29 +56,25 @@ div[data-testid="stVerticalBlock"] > div {{
     padding: 15px !important;
 }}
 
-/* 🔥 تعديل زرار الحجز (The Neon Green Button) 🔥 */
 div[data-testid="stFormSubmitButton"] button {{
-    background: linear-gradient(90deg, #39FF14 0%, #00FF7F 100%) !important; /* أخضر نيون */
-    color: #000000 !important; /* نص أسود للوضوح */
+    background: linear-gradient(90deg, #39FF14 0%, #00FF7F 100%) !important;
+    color: #000000 !important;
     font-size: 22px !important;
     font-weight: 900 !important;
-    border-radius: 50px !important; /* حواف دائرية تماماً */
+    border-radius: 50px !important;
     border: none !important;
     height: 60px !important;
     width: 100% !important;
     box-shadow: 0 0 20px rgba(57, 255, 20, 0.4) !important;
     transition: all 0.4s ease-in-out !important;
-    text-transform: uppercase;
 }}
 
 div[data-testid="stFormSubmitButton"] button:hover {{
-    background: #FFFFFF !important; /* يتحول للأبيض عند اللمس */
+    background: #FFFFFF !important;
     box-shadow: 0 0 30px #39FF14 !important;
     transform: scale(1.02) !important;
-    color: #000000 !important;
 }}
 
-/* الأزرار العادية الأخرى */
 .stButton > button {{
     background: #FFD700 !important;
     color: #000000 !important;
@@ -118,7 +111,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- التبويبات ----------------
 tabs = st.tabs(["📝 تسجيل الحجوزات", "👷 الموظفين", "💰 الإيرادات", "🔐 الإدارة"])
 footer_html = f"""<div class="footer-signature">🚀 تطوير: البشمهندس مصطفى الفيشاوي 🚀</div>"""
 
@@ -127,29 +119,29 @@ with tabs[0]:
     with st.form("booking_form", clear_on_submit=True):
         st.markdown("<h3 style='color:#FFD700;'>إضافة بيانات الطلب</h3>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
-        name = c1.text_input("اسم الزبون")
+        name = c1.text_input("اسم العميل")
         phone = c2.text_input("رقم الموبايل")
-        addr = c3.text_input("مكان التوصيل / العنوان")
+        addr = c3.text_input("العنوان / التفاصيل")
         
         c4, c5 = st.columns([2, 1])
         b_date = c4.date_input("تاريخ الحجز", dt_date.today())
         time_slot = c5.radio("وقت الحضور", ["صباحًا", "مساءً"], horizontal=True)
         
-        # الزرار اللي غيرنا شكله
         submit = st.form_submit_button("تأكيد وحفظ الأوردر الآن ✅")
         
         if submit:
             if name and phone:
                 c.execute("INSERT INTO bookings (name,address,phone,date,time_slot) VALUES (?,?,?,?,?)", 
                           (name, addr, phone, b_date.strftime("%Y-%m-%d"), time_slot))
-                conn.commit(); st.success("🎉 تم تسجيل الأوردر بنجاح يا بشمهندس!")
+                conn.commit()
+                st.success("🎉 تم تسجيل الأوردر بنجاح!")
             else: st.error("من فضلك اكتب الاسم والموبايل")
     st.markdown(footer_html, unsafe_allow_html=True)
 
 # 2. الموظفين
 with tabs[1]:
     pwd = st.text_input("كلمة السر", type="password", key="emp_p")
-    if pwd == EMP_PASSWORD:
+    if pwd == SHARED_PASSWORD:
         c.execute("SELECT id, name, daily_rate FROM employees")
         emps = c.fetchall()
         st.write("📊 **دفتر الحضور**")
@@ -184,7 +176,7 @@ with tabs[1]:
 # 3. الإيرادات
 with tabs[2]:
     pwd = st.text_input("الباسورد", type="password", key="ord_p")
-    if pwd == ORDERS_PASSWORD:
+    if pwd == SHARED_PASSWORD:
         with st.form("ord_f"):
             c1, c2 = st.columns([3, 1])
             o_name = c1.text_input("بيان الأوردر")
@@ -201,9 +193,38 @@ with tabs[2]:
 # 4. الإدارة
 with tabs[3]:
     pwd = st.text_input("الباسورد", type="password", key="adm_p")
-    if pwd == ADMIN_PASSWORD:
-        df_b = pd.read_sql("SELECT name, phone, address, date FROM bookings ORDER BY date DESC", conn)
-        st.dataframe(df_b, use_container_width=True)
-        if st.button("مسح كل البيانات القديمة"):
-            c.execute("DELETE FROM bookings"); conn.commit(); st.rerun()
+    if pwd == SHARED_PASSWORD:
+        st.subheader("📋 سجل الحجوزات الحالي")
+        df_b = pd.read_sql("SELECT id, name, phone, address, date FROM bookings ORDER BY id DESC", conn)
+        st.dataframe(df_b.drop(columns=['id']), use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("🗑️ إدارة المسح")
+        
+        col_del1, col_del2 = st.columns(2)
+        
+        with col_del1:
+            st.write("❌ **مسح عميل محدد**")
+            c.execute("SELECT id, name FROM bookings")
+            all_bookings = c.fetchall()
+            if all_bookings:
+                options = {f"{row[1]} (ID: {row[0]})": row[0] for row in all_bookings}
+                selected_order = st.selectbox("اختر العميل المراد حذفه", options.keys())
+                if st.button("حذف العميل المختار"):
+                    order_id = options[selected_order]
+                    c.execute("DELETE FROM bookings WHERE id=?", (order_id,))
+                    conn.commit()
+                    st.success(f"تم حذف العميل بنجاح!")
+                    st.rerun()
+            else:
+                st.info("لا توجد حجوزات لمسحها")
+
+        with col_del2:
+            st.write("⚠️ **منطقة الخطر**")
+            if st.button("مسح سجل الحجوزات بالكامل"):
+                c.execute("DELETE FROM bookings")
+                conn.commit()
+                st.warning("تم مسح السجل بالكامل!")
+                st.rerun()
+                
     st.markdown(footer_html, unsafe_allow_html=True)
