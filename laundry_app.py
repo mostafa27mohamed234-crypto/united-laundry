@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import date as dt_date
 import sqlite3
 import pandas as pd
+import io
 
 # ---------------- إعداد الصفحة ----------------
 st.set_page_config(
@@ -25,7 +26,7 @@ footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- الستايل المطور الأصلي ----------------
+# ---------------- الستايل المطور الأصلي (كامل كما طلبته) ----------------
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap');
@@ -162,7 +163,6 @@ with tabs[1]:
                 conn.commit(); st.rerun()
         
         st.markdown("---")
-        # التعديل المطلوب: اختيار اليوم
         att_day = st.date_input("📅 اختر يوم الحضور", dt_date.today())
         day_str = att_day.strftime("%Y-%m-%d")
 
@@ -174,7 +174,7 @@ with tabs[1]:
             p_ids = [r[0] for r in c.fetchall()]
             
             with st.form("att_form"):
-                cols = st.columns(len(emps))
+                cols = st.columns(len(emps) if len(emps) > 0 else 1)
                 at_list = []
                 for i, (eid, ename, rate) in enumerate(emps):
                     if cols[i].checkbox(f"{ename}", value=(eid in p_ids), key=f"at_{eid}"): at_list.append(eid)
@@ -220,13 +220,32 @@ with tabs[2]:
         st.metric("إجمالي الخزنة اليوم", f"{sum(o[1] for o in data)} ج.م")
     st.markdown(footer_html, unsafe_allow_html=True)
 
-# 4. الإدارة
+# 4. الإدارة (تم إضافة زر النسخ الاحتياطي هنا)
 with tabs[3]:
     pwd = st.text_input("الباسورد", type="password", key="adm_p")
     if pwd == SHARED_PASSWORD:
         st.subheader("📋 سجل الحجوزات")
         df_b = pd.read_sql("SELECT id, name, phone, address, date FROM bookings ORDER BY id DESC", conn)
         st.dataframe(df_b.drop(columns=['id']), use_container_width=True)
+        
+        # --- إضافة زر النسخ الاحتياطي للحماية من مسح الداتا ---
+        st.markdown("---")
+        st.subheader("📥 نسخة احتياطية (لحماية بياناتك من الضياع)")
+        
+        # تجميع كل الجداول في ملف Excel واحد
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df_b.to_excel(writer, sheet_name='الحجوزات', index=False)
+            pd.read_sql("SELECT * FROM daily_orders", conn).to_excel(writer, sheet_name='الإيرادات', index=False)
+            pd.read_sql("SELECT * FROM employees", conn).to_excel(writer, sheet_name='الموظفين', index=False)
+        
+        st.download_button(
+            label="اضغط هنا لتحميل نسخة من كل البيانات (Excel) 💾",
+            data=output.getvalue(),
+            file_name=f"united_backup_{dt_date.today()}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
         st.markdown("---")
         st.subheader("🗑️ إدارة المسح")
         c_del1, c_del2 = st.columns(2)
